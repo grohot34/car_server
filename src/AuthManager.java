@@ -4,14 +4,16 @@ public class AuthManager {
 
     // Метод для регистрации пользователя
     public static boolean register(DBManager dbManager, String login, String password) {
-        String hash = DBManager.hashPassword(password);  // Хешируем пароль с солью
-        String query = "INSERT INTO users (login, password_hash) VALUES (?, ?)";
+        String hash = dbManager.hashPassword(password);// Хешируем пароль с солью
+        String role = "CLIENT";
+        String query = "INSERT INTO users (login, password_hash, role) VALUES (?, ?, ?)";
 
         try (Connection conn = dbManager.getDbConnection(); // Используем переданный объект DBManager
              PreparedStatement ps = conn.prepareStatement(query)) {
 
             ps.setString(1, login);
             ps.setString(2, hash);
+            ps.setString(3, role);
             ps.executeUpdate();
             return true;
 

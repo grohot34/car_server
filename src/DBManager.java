@@ -60,6 +60,7 @@ public class DBManager {
 
             prSt.setString(1, login);
             prSt.setString(2, hashedPassword);
+
             prSt.executeUpdate();
             System.out.println("Пользователь успешно добавлен: " + login);
         } catch (SQLException e) {
@@ -98,5 +99,27 @@ public class DBManager {
                 System.out.println("- " + user);
             }
         }
+    }
+
+    public String getUserRoleByLogin(String login) {
+        String role = "CLIENT";
+        String query = "SELECT role FROM users WHERE login = ?";
+
+
+        try (Connection connection = getDbConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+
+            // Устанавливаем параметр в запросе
+            stmt.setString(1, login);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    role = rs.getString("role");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return role;
     }
 }

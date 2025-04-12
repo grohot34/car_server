@@ -7,7 +7,7 @@ public class LoginWindow extends JFrame {
     private JPasswordField passwordField;
     private JButton loginButton, registerButton;
 
-    public LoginWindow() {
+    public LoginWindow(DBManager dbManager) {
         setTitle("Авторизация");
         setSize(300, 200);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -26,27 +26,41 @@ public class LoginWindow extends JFrame {
         add(loginButton);
         add(registerButton);
 
-        loginButton.addActionListener(e -> handleAuth("LOGIN"));
-        registerButton.addActionListener(e -> handleAuth("REGISTER"));
+        loginButton.addActionListener(e -> handleAuth("LOGIN", dbManager));
+        registerButton.addActionListener(e -> handleAuth("REGISTER", dbManager));
     }
 
-    private void handleAuth(String commandType) {
+    private void handleAuth(String commandType, DBManager dbManager) {
         String login = loginField.getText();
         String password = new String(passwordField.getPassword());
-
         if (login.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Поля не должны быть пустыми!");
             return;
         }
-
+        String role = dbManager.getUserRoleByLogin(login);
+        System.out.println(role);
         String command = commandType + ":" + login + ":" + password;
         String response = ClientSender.sendCommand(command);
         System.out.println(command);
         System.out.println(response);
-        if ("SUCCESS".equals(response)) {
+
+
+
+        if (response.startsWith("SUCCESS")) {
             JOptionPane.showMessageDialog(this, "Успешно!");
-            // тут можно открыть следующее окно (например, меню пользователя)
-            new MainWindow().setVisible(true);
+            switch (role) {
+                case "CLIENT":
+                    new ClientWindow().setVisible(true);
+                    break;
+                case "ADMIN":
+                    new AdminWindow().setVisible(true);
+                    break;
+                case "MANAGER":
+                    new ManagerWindow().setVisible(true);
+                    break;
+                    default: JOptionPane.showMessageDialog(this, "Неизвестная роль: " + role);
+            }
+
 
             // Закрытие окна авторизации
             this.dispose();
@@ -55,7 +69,9 @@ public class LoginWindow extends JFrame {
         }
     }
 
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new LoginWindow().setVisible(true));
+        DBManager dbManager = new DBManager();
+        SwingUtilities.invokeLater(() -> new LoginWindow(dbManager).setVisible(true));
     }
 }
