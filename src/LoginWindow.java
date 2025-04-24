@@ -37,6 +37,12 @@ public class LoginWindow extends JFrame {
             JOptionPane.showMessageDialog(this, "Поля не должны быть пустыми!");
             return;
         }
+
+        if (dbManager.isUserBlocked(login)) {
+            JOptionPane.showMessageDialog(this, "Ваша учетная запись заблокирована. Обратитесь к администратору.");
+            return;
+        }
+
         String role = dbManager.getUserRoleByLogin(login);
         System.out.println(role);
         String command = commandType + ":" + login + ":" + password;

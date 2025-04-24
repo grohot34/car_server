@@ -1,6 +1,9 @@
+import model.User;
+
 import javax.swing.*;
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.concurrent.*;
 
 public class MainServer {
@@ -8,11 +11,6 @@ public class MainServer {
     private static final int MAX_CLIENTS = 10;
     public static void main(String[] args) {
         DBManager dbManager = new DBManager();
-        dbManager.displayUsers();
-
-
-
-
 
 
         ExecutorService executorService = Executors.newFixedThreadPool(MAX_CLIENTS);

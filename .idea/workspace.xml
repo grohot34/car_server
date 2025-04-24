@@ -4,9 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="08.04">
+    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="dividing roles">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/AuthManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/AuthManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dfggg.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainServer.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainServer.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DBManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DBManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/LoginWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/LoginWindow.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MainServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainServer.java" afterDir="false" />
@@ -39,6 +45,9 @@
     &quot;accountId&quot;: &quot;30aa07e5-0598-4c64-90dc-9537673ca580&quot;
   }
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
@@ -58,11 +67,26 @@
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/Users/Gt/IdeaProjects/Car_Server&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fdfe4dae3a2d-intellij.indexing.shared.core-IU-243.21565.193" />
+        <option value="bundled-js-predefined-d6986cc7102b-e768b9ed790e-JavaScript-IU-243.21565.193" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -71,6 +95,9 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1744120442065</updated>
+      <workItem from="1745259287998" duration="5000" />
+      <workItem from="1745508928328" duration="5817000" />
+      <workItem from="1745530511549" duration="5090000" />
     </task>
     <task id="LOCAL-00001" summary="08.04">
       <option name="closed" value="true" />
@@ -91,8 +118,21 @@
     <option name="localTasksCounter" value="3" />
     <servers />
   </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="08.04" />
     <option name="LAST_COMMIT_MESSAGE" value="08.04" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <breakpoint enabled="true" type="java-exception">
+          <properties class="java.sql.SQLSyntaxErrorException" package="java.sql" />
+          <option name="timeStamp" value="2" />
+        </breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
