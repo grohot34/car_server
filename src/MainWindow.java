@@ -1,5 +1,5 @@
 import model.User;
-
+import util.BackupManager;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -39,18 +39,48 @@ class ManagerWindow extends MainWindow {
 
 // Окно для администратора
 class AdminWindow extends MainWindow {
+    public AdminWindow() {
+        super("Окно администратора", "Добро пожаловать, Администратор!");
+
+        JButton manageUsersButton = new JButton("Управление пользователями");
+        manageUsersButton.setFont(new Font("Serif", Font.PLAIN, 18));
+
+        manageUsersButton.addActionListener(e -> {
+            UserManagement userManagementWindow = new UserManagement();
+            userManagementWindow.setVisible(true);
+        });
+
+
+        JButton backupButton = new JButton("Создать резервную копию базы данных");
+        backupButton.setFont(new Font("Serif", Font.PLAIN, 18));
+        backupButton.addActionListener(e -> BackupManager.createBackupWithProgress(AdminWindow.this));
+
+
+        JPanel panel = new JPanel();
+        panel.add(manageUsersButton);
+        panel.add(backupButton);
+
+        getContentPane().add(panel, BorderLayout.CENTER);
+    }
+}
+
+class UserManagement extends JFrame {
     private JTable userTable;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
     private JTextField searchField;
     private JComboBox<String> roleFilterBox;
 
-    public AdminWindow() {
-        super("Окно администратора", "Добро пожаловать, Администратор!");
-        initAdminComponents();
+    public UserManagement() {
+        setTitle("Управление пользователями");
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        initUserManagementComponents();
     }
 
-    private void initAdminComponents() {
+    private void initUserManagementComponents() {
+
         // Модель таблицы с колонками
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("Поиск по логину:"));
@@ -114,9 +144,17 @@ class AdminWindow extends MainWindow {
 
         // Слушатели для фильтрации
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { filter(); }
-            public void removeUpdate(DocumentEvent e) { filter(); }
-            public void changedUpdate(DocumentEvent e) { filter(); }
+            public void insertUpdate(DocumentEvent e) {
+                filter();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                filter();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                filter();
+            }
         });
         roleFilterBox.addActionListener(e -> filter());
 
@@ -128,6 +166,7 @@ class AdminWindow extends MainWindow {
     private void addUserToTable(int id, String username, String role) {
         tableModel.addRow(new Object[]{id, username, role});
     }
+
     private void loadUsersFromDatabase() {
         DBManager dbManager = new DBManager();
         ArrayList<User> users = dbManager.getUsers();
@@ -240,6 +279,7 @@ class AdminWindow extends MainWindow {
             loadUsersFromDatabase();
         }
     }
+
     private void filter() {
         RowFilter<DefaultTableModel, Object> loginFilter = null;
         RowFilter<DefaultTableModel, Object> roleFilter = null;
@@ -284,5 +324,4 @@ class AdminWindow extends MainWindow {
             JOptionPane.showMessageDialog(this, "Пожалуйста, выберите пользователя.");
         }
     }
-
 }

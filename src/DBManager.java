@@ -1,5 +1,7 @@
 import model.User;
-
+import javax.swing.*;
+import java.io.File;
+import java.io.IOException;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.Connection;
@@ -209,5 +211,4 @@ public class DBManager {
             e.printStackTrace();
         }
     }
-
 }

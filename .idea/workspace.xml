@@ -4,18 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="dividing roles">
+    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="admins features">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dfggg.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainServer.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainServer.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DBManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DBManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/LoginWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/LoginWindow.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/MainServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MainWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainWindow.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -42,7 +34,7 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/grohot34/car_server.git&quot;,
-    &quot;accountId&quot;: &quot;30aa07e5-0598-4c64-90dc-9537673ca580&quot;
+    &quot;accountId&quot;: &quot;fb1efe7d-fcf4-4be1-934a-86666ee8d657&quot;
   }
 }</component>
   <component name="ProblemsViewState">
@@ -97,7 +89,9 @@
       <updated>1744120442065</updated>
       <workItem from="1745259287998" duration="5000" />
       <workItem from="1745508928328" duration="5817000" />
-      <workItem from="1745530511549" duration="5090000" />
+      <workItem from="1745530511549" duration="5241000" />
+      <workItem from="1745536365008" duration="60000" />
+      <workItem from="1745690128242" duration="6133000" />
     </task>
     <task id="LOCAL-00001" summary="08.04">
       <option name="closed" value="true" />
@@ -115,7 +109,31 @@
       <option name="project" value="LOCAL" />
       <updated>1744138597525</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="admins features">
+      <option name="closed" value="true" />
+      <created>1745536177374</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1745536177374</updated>
+    </task>
+    <task id="LOCAL-00004" summary="admins features">
+      <option name="closed" value="true" />
+      <created>1745536248710</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1745536248710</updated>
+    </task>
+    <task id="LOCAL-00005" summary="admins features">
+      <option name="closed" value="true" />
+      <created>1745536395012</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1745536395012</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -123,7 +141,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="08.04" />
-    <option name="LAST_COMMIT_MESSAGE" value="08.04" />
+    <MESSAGE value="admins features" />
+    <option name="LAST_COMMIT_MESSAGE" value="admins features" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
