@@ -1,5 +1,6 @@
 import model.User;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.io.File;
 import java.io.IOException;
 import java.sql.DriverManager;
@@ -209,6 +210,29 @@ public class DBManager {
 
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void loadTableData(JTable table, String sqlQuery) {
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+        model.setRowCount(0); // очищаем старые данные
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sqlQuery);
+             ResultSet rs = stmt.executeQuery()) {
+
+            int columnCount = rs.getMetaData().getColumnCount();
+            while (rs.next()) {
+                Object[] row = new Object[columnCount];
+                for (int i = 0; i < columnCount; i++) {
+                    row[i] = rs.getObject(i + 1);
+                }
+                model.addRow(row);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Ошибка загрузки данных: " + e.getMessage());
         }
     }
 }

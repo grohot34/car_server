@@ -6,6 +6,10 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
@@ -24,16 +28,79 @@ public class MainWindow extends JFrame {
 
 // Окно для клиента
 class ClientWindow extends MainWindow {
+    private DBManager dbManager;
+
     public ClientWindow() {
-        super("Окно клиента", "Добро пожаловать, Клиент!");
-        // можно добавить клиентские компоненты
+        super("Окно клиента", "Добро пожаловать, клиент!");
+        dbManager = new DBManager();
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Кнопки
+        JButton viewCarsButton = new JButton("Просмотреть автомобили");
+        JButton createOrderButton = new JButton("Создать заказ на покупку автомобиля");
+        JButton viewPurchasesButton = new JButton("Просмотреть мои покупки");
+        JButton createServiceRequestButton = new JButton("Создать запрос на техобслуживание");
+        JButton changePasswordButton = new JButton("Сменить пароль");
+
+        // Обработчики кнопок
+        viewCarsButton.addActionListener(e -> {
+            CarsWindow carsWindow = new CarsWindow();
+            carsWindow.setVisible(true);
+        });
+
+        createOrderButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this, "Окно создания заказа ещё не реализовано.");
+        });
+
+        viewPurchasesButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this, "Окно просмотра покупок ещё не реализовано.");
+        });
+
+        createServiceRequestButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this, "Окно запроса на техобслуживание ещё не реализовано.");
+        });
+
+        changePasswordButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this, "Окно смены пароля ещё не реализовано.");
+        });
+
+        // Добавляем кнопки на форму
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        add(viewCarsButton, gbc);
+
+        gbc.gridy++;
+        add(createOrderButton, gbc);
+
+        gbc.gridy++;
+        add(viewPurchasesButton, gbc);
+
+        gbc.gridy++;
+        add(createServiceRequestButton, gbc);
+
+        gbc.gridy++;
+        add(changePasswordButton, gbc);
     }
 }
-// Окно для клиента
+// Окно для менеджера
 class ManagerWindow extends MainWindow {
     public ManagerWindow() {
         super("Окно менеджера", "Добро пожаловать, Менеджер!");
-        // можно добавить клиентские компоненты
+
+        JButton openMonitoringButton = new JButton("Мониторинг продаж и сервиса");
+        openMonitoringButton.setFont(new Font("Serif", Font.BOLD, 16));
+        openMonitoringButton.addActionListener(e -> {
+            SalesMonitoringWindow monitoringWindow = new SalesMonitoringWindow();
+            monitoringWindow.setVisible(true);
+        });
+
+        JPanel panel = new JPanel();
+        panel.add(openMonitoringButton);
+
+        getContentPane().add(panel, BorderLayout.SOUTH);
     }
 }
 
@@ -322,6 +389,206 @@ class UserManagement extends JFrame {
             loadUsersFromDatabase();
         } else {
             JOptionPane.showMessageDialog(this, "Пожалуйста, выберите пользователя.");
+        }
+    }
+}
+
+class SalesMonitoringWindow extends JFrame {
+    private JTable carsTable;
+    private JTable clientsTable;
+    private JTable salesTable;
+    private JTable serviceRecordsTable;
+
+    public SalesMonitoringWindow() {
+        setTitle("Мониторинг продаж и сервисного обслуживания");
+        setSize(1200, 800);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        DBManager dbManager = new DBManager();
+        // Автомобили
+        JPanel carsPanel = createTablePanel(
+                new String[]{"ID", "VIN", "Бренд", "Модель", "Год", "Цена", "Гарантия (лет)", "В наличии", "Количество"},
+                "Автомобили"
+        );
+        carsTable = (JTable) carsPanel.getClientProperty("table");
+        dbManager.loadTableData(carsTable, "SELECT id, vin, brand, model, year, price, warranty_years, available, quantity FROM cars");
+        tabbedPane.add("Автомобили", carsPanel);
+
+// Клиенты
+        JPanel clientsPanel = createTablePanel(
+                new String[]{"ID", "ФИО", "Телефон", "Email", "Адрес"},
+                "Клиенты"
+        );
+        clientsTable = (JTable) clientsPanel.getClientProperty("table");
+        dbManager.loadTableData(clientsTable, "SELECT id, full_name, phone, email, address FROM clients");
+        tabbedPane.add("Клиенты", clientsPanel);
+
+// Продажи
+        JPanel salesPanel = createTablePanel(
+                new String[]{"ID", "ID Авто", "ID Клиента", "Дата продажи", "Цена продажи"},
+                "Продажи"
+        );
+        salesTable = (JTable) salesPanel.getClientProperty("table");
+        dbManager.loadTableData(salesTable, "SELECT id, car_id, client_id, sale_date, sale_price FROM sales");
+        tabbedPane.add("Продажи", salesPanel);
+
+// Сервисное обслуживание
+        JPanel servicePanel = createTablePanel(
+                new String[]{"ID", "ID Авто", "ID Клиента", "Дата сервиса", "Описание", "По гарантии"},
+                "Сервисное обслуживание"
+        );
+        serviceRecordsTable = (JTable) servicePanel.getClientProperty("table");
+        dbManager.loadTableData(serviceRecordsTable, "SELECT id, car_id, client_id, service_date, description, under_warranty FROM service_records");
+        tabbedPane.add("Сервисное обслуживание", servicePanel);
+
+        add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    private JPanel createTablePanel(String[] columnNames, String entityName) {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+        JTable table = new JTable(model);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Панель кнопок
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton addButton = new JButton("Добавить");
+        JButton editButton = new JButton("Редактировать");
+        JButton deleteButton = new JButton("Удалить");
+
+        // Слушатели кнопок
+        addButton.addActionListener(e -> addRow(model, entityName));
+        editButton.addActionListener(e -> editRow(model, table, entityName));
+        deleteButton.addActionListener(e -> deleteRow(model, table));
+
+        buttonsPanel.add(addButton);
+        buttonsPanel.add(editButton);
+        buttonsPanel.add(deleteButton);
+
+        panel.add(buttonsPanel, BorderLayout.SOUTH);
+
+        // Запоминаем таблицу
+        panel.putClientProperty("table", table);
+
+        return panel;
+    }
+
+    private void addRow(DefaultTableModel model, String entityName) {
+        int columns = model.getColumnCount();
+        String[] inputData = new String[columns];
+
+        for (int i = 0; i < columns; i++) {
+            inputData[i] = JOptionPane.showInputDialog(this, "Введите " + model.getColumnName(i) + ":");
+            if (inputData[i] == null) {
+                // Отмена ввода
+                return;
+            }
+        }
+        model.addRow(inputData);
+    }
+
+    private void editRow(DefaultTableModel model, JTable table, String entityName) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите строку для редактирования", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            String currentValue = (String) model.getValueAt(selectedRow, i);
+            String newValue = JOptionPane.showInputDialog(this, "Измените " + model.getColumnName(i) + ":", currentValue);
+            if (newValue != null) {
+                model.setValueAt(newValue, selectedRow, i);
+            }
+        }
+    }
+
+    private void deleteRow(DefaultTableModel model, JTable table) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите строку для удаления", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(this, "Удалить выбранную строку?", "Подтверждение", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            model.removeRow(selectedRow);
+        }
+    }
+}
+
+class CarsWindow extends JFrame {
+    private JTable carsTable;
+    private DBManager dbManager;
+
+    public CarsWindow() {
+        dbManager = new DBManager();
+
+        setTitle("Доступные автомобили");
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Панель для поиска автомобилей
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JLabel searchLabel = new JLabel("Поиск по автомобилям:");
+        JTextField searchField = new JTextField(20);
+        searchPanel.add(searchLabel);
+        searchPanel.add(searchField);
+        add(searchPanel, BorderLayout.NORTH);
+
+        // Таблица автомобилей
+        String[] columnNames = {"Марка", "Модель", "Год", "Цена", "Гарантия на сервисное обслуживание(лет)", "Наличие"};
+        carsTable = new JTable(new DefaultTableModel(columnNames, 0));
+        JScrollPane scrollPane = new JScrollPane(carsTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        loadCarsData();
+
+        // Реализация поиска по таблице
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                search();
+            }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                search();
+            }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                search();
+            }
+            private void search() {
+                String text = searchField.getText();
+                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) carsTable.getModel());
+                carsTable.setRowSorter(sorter);
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+            }
+        });
+    }
+
+    private void loadCarsData() {
+        try (Connection conn = dbManager.getDbConnection()) {
+            String sql = "SELECT brand, model, year, price, warranty_years, available FROM cars";
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                DefaultTableModel model = (DefaultTableModel) carsTable.getModel();
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                            rs.getString("brand"),
+                            rs.getString("model"),
+                            rs.getInt("year"),
+                            rs.getDouble("price"),
+                            rs.getInt("warranty_years"),
+                            rs.getBoolean("available") ? "Да" : "Нет"
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 }

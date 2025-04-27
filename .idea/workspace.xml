@@ -4,9 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="admins features">
+    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="backup database">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dfggg.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DBManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DBManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MainWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainWindow.java" afterDir="false" />
     </list>
@@ -92,6 +97,8 @@
       <workItem from="1745530511549" duration="5241000" />
       <workItem from="1745536365008" duration="60000" />
       <workItem from="1745690128242" duration="6133000" />
+      <workItem from="1745699069777" duration="389000" />
+      <workItem from="1745758690615" duration="10836000" />
     </task>
     <task id="LOCAL-00001" summary="08.04">
       <option name="closed" value="true" />
@@ -133,7 +140,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745536395012</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="backup database">
+      <option name="closed" value="true" />
+      <created>1745699337140</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1745699337140</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -142,7 +157,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="08.04" />
     <MESSAGE value="admins features" />
-    <option name="LAST_COMMIT_MESSAGE" value="admins features" />
+    <MESSAGE value="backup database" />
+    <option name="LAST_COMMIT_MESSAGE" value="backup database" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
