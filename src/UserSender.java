@@ -1,7 +1,7 @@
 import java.io.*;
 import java.net.*;
 
-public class ClientSender {
+public class UserSender {
     public static String sendCommand(String command) {
         try (Socket socket = new Socket("localhost", 8080)) {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);

@@ -1,6 +1,7 @@
+import model.User;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 
 public class LoginWindow extends JFrame {
     private JTextField loginField;
@@ -44,37 +45,35 @@ public class LoginWindow extends JFrame {
         }
 
         String role = dbManager.getUserRoleByLogin(login);
+        int id = dbManager.getUserIdByLogin(login);
         System.out.println(role);
         String command = commandType + ":" + login + ":" + password;
-        String response = ClientSender.sendCommand(command);
-        System.out.println(command);
-        System.out.println(response);
+        String response = UserSender.sendCommand(command);
 
-
-
+        User user = new User(id, login, role);
         if (response.startsWith("SUCCESS")) {
             JOptionPane.showMessageDialog(this, "Успешно!");
             switch (role) {
                 case "CLIENT":
-                    new ClientWindow().setVisible(true);
+                    ClientWindow clientWindow = new ClientWindow(user);
+                    clientWindow.setVisible(true);
                     break;
                 case "ADMIN":
-                    new AdminWindow().setVisible(true);
+                    AdminWindow adminWindow = new AdminWindow(user);
+                    adminWindow.setVisible(true);
                     break;
                 case "MANAGER":
-                    new ManagerWindow().setVisible(true);
+                    ManagerWindow managerWindow = new ManagerWindow(user);
+                    managerWindow.setVisible(true);
                     break;
                     default: JOptionPane.showMessageDialog(this, "Неизвестная роль: " + role);
             }
-
-
             // Закрытие окна авторизации
             this.dispose();
         } else {
             JOptionPane.showMessageDialog(this, "Ошибка: " + response);
         }
     }
-
 
     public static void main(String[] args) {
         DBManager dbManager = new DBManager();

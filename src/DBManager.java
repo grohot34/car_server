@@ -1,8 +1,6 @@
 import model.User;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.io.File;
-import java.io.IOException;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.Connection;
@@ -11,7 +9,6 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 
 public class DBManager {
     private static final String HOST = "localhost";
@@ -45,7 +42,6 @@ public class DBManager {
         }
     }
 
-
     public static boolean checkPassword(String inputPassword, String storedHash) {
         String hashedInputPassword = hashPassword(inputPassword);
         return hashedInputPassword != null && hashedInputPassword.equals(storedHash);
@@ -66,7 +62,6 @@ public class DBManager {
         }
         return false; // по умолчанию считаем, что не заблокирован
     }
-
 
     public boolean doesLoginExist(String login) {
         String sql = "SELECT COUNT(*) FROM users WHERE login = ?";
@@ -114,8 +109,6 @@ public class DBManager {
         ArrayList<User> users = new ArrayList<>();
         String sql = "SELECT id, login, password_hash, role, is_blocked FROM `users`";
 
-
-
         try (Connection connection = getDbConnection();
              PreparedStatement prSt = connection.prepareStatement(sql);
              ResultSet resultSet = prSt.executeQuery()) {
@@ -134,24 +127,9 @@ public class DBManager {
         return users;
     }
 
-
-    // Метод для вывода всех пользователей
-    public void displayUsers() {
-        ArrayList<User> users = getUsers();
-        if (users.isEmpty()) {
-            System.out.println("Нет пользователей для отображения.");
-        } else {
-            System.out.println("Список пользователей:");
-            for (User user : users) {
-                System.out.println("- " + user);
-            }
-        }
-    }
-
     public String getUserRoleByLogin(String login) {
         String role = "CLIENT";
-        String query = "SELECT role FROM users WHERE login = ?";
-
+        String query = "SELECT id, role FROM users WHERE login = ?";
 
         try (Connection connection = getDbConnection();
              PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -168,6 +146,28 @@ public class DBManager {
             e.printStackTrace();
         }
         return role;
+    }
+
+    public int getUserIdByLogin(String login) {
+        int id = 0;
+        String query = "SELECT id FROM users WHERE login = ?";
+
+
+        try (Connection connection = getDbConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+
+            // Устанавливаем параметр в запросе
+            stmt.setString(1, login);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    id = rs.getInt("id");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return id;
     }
 
     public void updateUserRole(int userId, String newRole) {
@@ -235,4 +235,21 @@ public class DBManager {
             JOptionPane.showMessageDialog(null, "Ошибка загрузки данных: " + e.getMessage());
         }
     }
+    public int getCarIdByBrandAndModel(String brand, String model) {
+        String query = "SELECT id FROM cars WHERE brand = ? AND model = ? LIMIT 1";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, brand);
+            stmt.setString(2, model);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1; // или выбросить исключение
+    }
+
 }
+

@@ -1,15 +1,13 @@
-import org.w3c.dom.ls.LSOutput;
 
 import java.io.*;
 import java.net.*;
-import java.util.Arrays;
 
-public class ClientHandler implements Runnable {
+public class UserHandler implements Runnable {
     private final Socket socket;
     private final DBManager dbManager;  // Добавляем DBManager
 
     // Конструктор ClientHandler теперь принимает dbManager
-    public ClientHandler(Socket socket, DBManager dbManager) {
+    public UserHandler(Socket socket, DBManager dbManager) {
         this.socket = socket;
         this.dbManager = dbManager;
     }

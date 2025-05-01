@@ -1,9 +1,5 @@
-import model.User;
-
-import javax.swing.*;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
 import java.util.concurrent.*;
 
 public class MainServer {
@@ -23,7 +19,7 @@ public class MainServer {
                 System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
 
                 // Обработка каждого клиента в отдельном потоке
-                executorService.submit(new ClientHandler(clientSocket, dbManager));
+                executorService.submit(new UserHandler(clientSocket, dbManager));
             }
 
         } catch (IOException e) {

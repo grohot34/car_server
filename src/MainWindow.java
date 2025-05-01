@@ -6,10 +6,9 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.awt.event.ActionEvent;
+import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
@@ -29,9 +28,11 @@ public class MainWindow extends JFrame {
 // Окно для клиента
 class ClientWindow extends MainWindow {
     private DBManager dbManager;
+    private User currentUser;
 
-    public ClientWindow() {
-        super("Окно клиента", "Добро пожаловать, клиент!");
+    public ClientWindow(User currentUser) {
+        super("Окно клиента", "Добро пожаловать, " + currentUser.getLogin() + "!");
+        this.currentUser = currentUser;
         dbManager = new DBManager();
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -41,7 +42,8 @@ class ClientWindow extends MainWindow {
         // Кнопки
         JButton viewCarsButton = new JButton("Просмотреть автомобили");
         JButton createOrderButton = new JButton("Создать заказ на покупку автомобиля");
-        JButton viewPurchasesButton = new JButton("Просмотреть мои покупки");
+        JButton viewOrderButton = new JButton("Мои заказы");
+        JButton viewPurchasesButton = new JButton("Мои покупки");
         JButton createServiceRequestButton = new JButton("Создать запрос на техобслуживание");
         JButton changePasswordButton = new JButton("Сменить пароль");
 
@@ -52,7 +54,13 @@ class ClientWindow extends MainWindow {
         });
 
         createOrderButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Окно создания заказа ещё не реализовано.");
+            CreateOrderWindow orderWindow = new CreateOrderWindow(currentUser.getId());
+            orderWindow.setVisible(true);
+        });
+
+        viewOrderButton.addActionListener(e -> {
+            MyOrdersWindow ordersWindow = new MyOrdersWindow(currentUser.getId());
+            ordersWindow.setVisible(true);
         });
 
         viewPurchasesButton.addActionListener(e -> {
@@ -76,6 +84,9 @@ class ClientWindow extends MainWindow {
         add(createOrderButton, gbc);
 
         gbc.gridy++;
+        add(viewOrderButton, gbc);
+
+        gbc.gridy++;
         add(viewPurchasesButton, gbc);
 
         gbc.gridy++;
@@ -87,18 +98,28 @@ class ClientWindow extends MainWindow {
 }
 // Окно для менеджера
 class ManagerWindow extends MainWindow {
-    public ManagerWindow() {
+    private User currentUser;
+    private SalesMonitoringWindow monitoringWindow;
+    public ManagerWindow(User currentUser) {
         super("Окно менеджера", "Добро пожаловать, Менеджер!");
-
-        JButton openMonitoringButton = new JButton("Мониторинг продаж и сервиса");
+        this.currentUser = currentUser;
+        this.monitoringWindow = new SalesMonitoringWindow();
+        JButton openMonitoringButton = new JButton("Мониторинг продаж и сервисного обслуживания");
         openMonitoringButton.setFont(new Font("Serif", Font.BOLD, 16));
         openMonitoringButton.addActionListener(e -> {
-            SalesMonitoringWindow monitoringWindow = new SalesMonitoringWindow();
             monitoringWindow.setVisible(true);
+        });
+
+        JButton processOrdersButton = new JButton("Заказы");
+        processOrdersButton.setFont(new Font("Serif", Font.BOLD, 16));
+        processOrdersButton.addActionListener(e -> {
+            ManageOrdersWindow manageOrdersWindow = new ManageOrdersWindow(monitoringWindow);
+            manageOrdersWindow.setVisible(true);
         });
 
         JPanel panel = new JPanel();
         panel.add(openMonitoringButton);
+        panel.add(processOrdersButton);
 
         getContentPane().add(panel, BorderLayout.SOUTH);
     }
@@ -106,9 +127,10 @@ class ManagerWindow extends MainWindow {
 
 // Окно для администратора
 class AdminWindow extends MainWindow {
-    public AdminWindow() {
+    private final User currentUser;
+    public AdminWindow(User currentUser) {
         super("Окно администратора", "Добро пожаловать, Администратор!");
-
+        this.currentUser = currentUser;
         JButton manageUsersButton = new JButton("Управление пользователями");
         manageUsersButton.setFont(new Font("Serif", Font.PLAIN, 18));
 
@@ -520,6 +542,11 @@ class SalesMonitoringWindow extends JFrame {
             model.removeRow(selectedRow);
         }
     }
+
+    public void refreshSalesData() {
+        DBManager dbManager = new DBManager();
+        dbManager.loadTableData(salesTable, "SELECT id, car_id, client_id, sale_date, sale_price FROM sales");
+    }
 }
 
 class CarsWindow extends JFrame {
@@ -549,6 +576,8 @@ class CarsWindow extends JFrame {
         JScrollPane scrollPane = new JScrollPane(carsTable);
         add(scrollPane, BorderLayout.CENTER);
 
+
+
         loadCarsData();
 
         // Реализация поиска по таблице
@@ -571,7 +600,7 @@ class CarsWindow extends JFrame {
         });
     }
 
-    private void loadCarsData() {
+    public void loadCarsData() {
         try (Connection conn = dbManager.getDbConnection()) {
             String sql = "SELECT brand, model, year, price, warranty_years, available FROM cars";
             try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
@@ -591,4 +620,374 @@ class CarsWindow extends JFrame {
             e.printStackTrace();
         }
     }
+}
+
+class CreateOrderWindow extends JFrame {
+    private JTable carsTable;
+    private DBManager dbManager;
+    private int clientId;
+
+
+    public CreateOrderWindow(int clientId) {
+        this.clientId = clientId;
+        dbManager = new DBManager();
+
+        setTitle("Создание заказа на покупку автомобиля");
+        setSize(900, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Панель поиска
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JLabel searchLabel = new JLabel("Поиск по автомобилям:");
+        JTextField searchField = new JTextField(20);
+        searchPanel.add(searchLabel);
+        searchPanel.add(searchField);
+        add(searchPanel, BorderLayout.NORTH);
+
+        // Таблица с автомобилями
+        String[] columnNames = {"ID", "Марка", "Модель", "Год", "Цена", "Гарантия(лет)", "Наличие"};
+        carsTable = new JTable(new DefaultTableModel(columnNames, 0));
+        JScrollPane scrollPane = new JScrollPane(carsTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        loadCarsData();
+
+        // Кнопка оформления заказа
+        JButton orderButton = new JButton("Оформить заказ");
+        add(orderButton, BorderLayout.SOUTH);
+
+        // Обработка нажатия кнопки
+        orderButton.addActionListener(this::handleCreateOrder);
+
+        // Фильтр поиска
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filter(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filter(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filter(); }
+
+            private void filter() {
+                String text = searchField.getText();
+                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) carsTable.getModel());
+                carsTable.setRowSorter(sorter);
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+            }
+        });
+    }
+
+    private void loadCarsData() {
+        try (Connection conn = dbManager.getDbConnection()) {
+            String sql = "SELECT id, brand, model, year, price, warranty_years, available FROM cars WHERE available = TRUE";
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                DefaultTableModel model = (DefaultTableModel) carsTable.getModel();
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                            rs.getInt("id"),
+                            rs.getString("brand"),
+                            rs.getString("model"),
+                            rs.getInt("year"),
+                            rs.getDouble("price"),
+                            rs.getInt("warranty_years"),
+                            rs.getBoolean("available") ? "Да" : "Нет"
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Ошибка при загрузке данных: " + e.getMessage());
+        }
+    }
+
+    private void handleCreateOrder(ActionEvent e) {
+        int row = carsTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Пожалуйста, выберите автомобиль.");
+            return;
+        }
+
+        int modelRow = carsTable.convertRowIndexToModel(row);
+        int carId = (int) carsTable.getModel().getValueAt(modelRow, 0); // ID авто
+        double price = (double) carsTable.getModel().getValueAt(modelRow, 4); // Цена авто
+
+        // Ввод способа оплаты
+        String[] methods = {"Наличные", "Карта", "Кредит", "Другое"};
+        String paymentMethod = (String) JOptionPane.showInputDialog(
+                this,
+                "Выберите способ оплаты:",
+                "Способ оплаты",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                methods,
+                methods[0]);
+
+        if (paymentMethod == null) {
+            // Пользователь отменил выбор
+            return;
+        }
+
+        try (Connection conn = dbManager.getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO orders_to_sales (client_id, car_id, order_date, status, payment_method, total_price) " +
+                             "VALUES (?, ?, ?, ?, ?, ?)")) {
+
+            stmt.setInt(1, clientId);
+            stmt.setInt(2, carId);
+            stmt.setDate(3, Date.valueOf(LocalDate.now()));
+            stmt.setString(4, "Ожидает подтверждения");
+            stmt.setString(5, paymentMethod);
+            stmt.setDouble(6, price);
+
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Заказ успешно оформлен!");
+            dispose();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Ошибка при оформлении заказа: " + ex.getMessage());
+        }
+    }
+
+}
+
+class MyOrdersWindow extends JFrame {
+    private JTable ordersTable;
+    private DBManager dbManager;
+    private DefaultTableModel model;
+    private int clientId;
+
+    public MyOrdersWindow(int clientId) {
+        dbManager = new DBManager();
+        this.clientId = clientId;
+        setTitle("Мои заказы");
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        String[] columnNames = {"ID", "Марка", "Модель", "Год", "Цена", "Способ оплаты", "Дата заказа", "Статус"};
+
+        ordersTable = new JTable(new DefaultTableModel(columnNames, 0));
+        JScrollPane scrollPane = new JScrollPane(ordersTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton cancelButton = new JButton("Отменить заказ");
+        cancelButton.addActionListener(e -> cancelSelectedOrder());
+        buttonPanel.add(cancelButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        loadOrdersData(clientId);
+    }
+
+    private void loadOrdersData(int clientId) {
+        String query = """
+                SELECT o.id, c.brand, c.model, c.year, o.total_price, o.payment_method, o.order_date, o.status
+                FROM orders_to_sales o
+                JOIN cars c ON o.car_id = c.id
+                WHERE o.client_id = ?
+                ORDER BY o.order_date DESC
+                """;
+
+        try (Connection conn = dbManager.getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, clientId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                model = (DefaultTableModel) ordersTable.getModel();
+                model.setRowCount(0);
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                            rs.getInt("id"),
+                            rs.getString("brand"),
+                            rs.getString("model"),
+                            rs.getInt("year"),
+                            rs.getDouble("total_price"),
+                            rs.getString("payment_method"),
+                            rs.getDate("order_date"),
+                            rs.getString("status")
+                    });
+                }
+                ordersTable.getColumnModel().getColumn(0).setMinWidth(0);
+                ordersTable.getColumnModel().getColumn(0).setMaxWidth(0);
+                ordersTable.getColumnModel().getColumn(0).setWidth(0);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Ошибка загрузки заказов: " + e.getMessage());
+        }
+    }
+    private void cancelSelectedOrder() {
+        int selectedRow = ordersTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Пожалуйста, выберите заказ.");
+            return;
+        }
+
+        int modelRow = ordersTable.convertRowIndexToModel(selectedRow);
+        String status = (String) model.getValueAt(modelRow, 7);
+
+        if (!status.equals("Ожидает подтверждения")) {
+            JOptionPane.showMessageDialog(this, "Заказ нельзя отменить (уже обработан).");
+            return;
+        }
+
+        int orderId = (int) model.getValueAt(modelRow, 0);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Вы уверены, что хотите отменить заказ №" + orderId + "?",
+                "Подтверждение", JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        String updateSql = "UPDATE orders_to_sales SET status = 'Отменён' WHERE id = ?";
+
+        try (Connection conn = dbManager.getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+
+            stmt.setInt(1, orderId);
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Заказ успешно отменён.");
+            loadOrdersData(clientId); // обновляем таблицу
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Ошибка при отмене заказа: " + e.getMessage());
+        }
+    }
+}
+
+class ManageOrdersWindow extends JFrame {
+    private JTable ordersTable;
+    private DBManager dbManager;
+    private DefaultTableModel model;
+
+    private SalesMonitoringWindow monitoringWindow;
+
+    public ManageOrdersWindow(SalesMonitoringWindow monitoringWindow) {
+        this.monitoringWindow = monitoringWindow;
+        dbManager = new DBManager();
+
+        setTitle("Обработка заказов");
+        setSize(900, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        String[] columnNames = {"ID", "Клиент ID", "Марка", "Модель", "Год", "Цена", "Способ оплаты", "Дата заказа", "Статус"};
+        model = new DefaultTableModel(columnNames, 0);
+        ordersTable = new JTable(model);
+        JScrollPane scrollPane = new JScrollPane(ordersTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton approveButton = new JButton("Подтвердить");
+        JButton rejectButton = new JButton("Отклонить");
+
+        approveButton.addActionListener(e -> updateOrderStatus("Подтверждён"));
+        rejectButton.addActionListener(e -> updateOrderStatus("Отклонён"));
+
+        buttonPanel.add(approveButton);
+        buttonPanel.add(rejectButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        loadOrdersData();
+    }
+
+    private void loadOrdersData() {
+        String query = """
+                SELECT o.id, o.client_id, c.brand, c.model, c.year,
+                       o.total_price, o.payment_method, o.order_date, o.status
+                FROM orders_to_sales o
+                JOIN cars c ON o.car_id = c.id
+                ORDER BY o.order_date DESC
+                """;
+
+        model.setRowCount(0); // очищаем перед загрузкой
+
+        try (Connection conn = dbManager.getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                        rs.getInt("id"),
+                        rs.getInt("client_id"),
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("total_price"),
+                        rs.getString("payment_method"),
+                        rs.getDate("order_date"),
+                        rs.getString("status")
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Ошибка загрузки заказов: " + e.getMessage());
+        }
+    }
+
+    private void updateOrderStatus(String newStatus) {
+        int selectedRow = ordersTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите заказ.");
+            return;
+        }
+
+        int modelRow = ordersTable.convertRowIndexToModel(selectedRow);
+        String currentStatus = (String) model.getValueAt(modelRow, 8);
+
+        if (!"Ожидает подтверждения".equals(currentStatus)) {
+            JOptionPane.showMessageDialog(this, "Можно изменить только заказы со статусом 'Ожидает подтверждения'.");
+            return;
+        }
+
+        int orderId = (int) model.getValueAt(modelRow, 0);
+
+        String updateSql = "UPDATE orders_to_sales SET status = ? WHERE id = ?";
+        try (Connection conn = dbManager.getDbConnection();
+             PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+
+            updateStmt.setString(1, newStatus);
+            updateStmt.setInt(2, orderId);
+            updateStmt.executeUpdate();
+
+            // Если заказ подтвержден — вставим запись в таблицу sales
+            if ("Подтверждён".equals(newStatus)) {
+                // Получаем данные заказа
+                int clientId = (int) model.getValueAt(modelRow, 1);
+                String brand = (String) model.getValueAt(modelRow, 2);
+                String modelName = (String) model.getValueAt(modelRow, 3);
+                double price = (double) model.getValueAt(modelRow, 5);
+
+                // Получим ID машины
+                int carId = dbManager.getCarIdByBrandAndModel(brand, modelName);
+
+                // Вставим в таблицу продаж
+                String insertSale = "INSERT INTO sales (car_id, client_id, sale_date, sale_price) VALUES (?, ?, CURRENT_DATE, ?)";
+                try (PreparedStatement insertStmt = conn.prepareStatement(insertSale)) {
+                    insertStmt.setInt(1, carId);
+                    insertStmt.setInt(2, clientId);
+                    insertStmt.setDouble(3, price);
+                    insertStmt.executeUpdate();
+                }
+
+                // Уменьшим количество машин на складе
+                String updateCarQty = "UPDATE cars SET quantity = quantity - 1 WHERE id = ?";
+                try (PreparedStatement carStmt = conn.prepareStatement(updateCarQty)) {
+                    carStmt.setInt(1, carId);
+                    carStmt.executeUpdate();
+                }
+
+                // Обновим мониторинг
+                if (monitoringWindow != null) {
+                    monitoringWindow.refreshSalesData();
+                }
+            }
+
+            JOptionPane.showMessageDialog(this, "Статус заказа обновлён на: " + newStatus);
+            loadOrdersData();
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Ошибка обновления статуса: " + e.getMessage());
+        }
+    }
+
 }
