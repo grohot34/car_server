@@ -30,6 +30,7 @@ public class User {
     public String getRole() {
         return role;
     }
+
     public int isBlocked() {
         return isBlocked;
     }

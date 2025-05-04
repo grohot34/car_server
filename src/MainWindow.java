@@ -12,16 +12,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
-    public MainWindow(String title, String message) {
+    public MainWindow(String title) {
         setTitle(title);
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-
-        JLabel welcomeLabel = new JLabel(message, JLabel.CENTER);
-        welcomeLabel.setFont(new Font("Serif", Font.PLAIN, 20));
-
-        add(welcomeLabel);
     }
 }
 
@@ -31,7 +26,7 @@ class ClientWindow extends MainWindow {
     private User currentUser;
 
     public ClientWindow(User currentUser) {
-        super("Окно клиента", "Добро пожаловать, " + currentUser.getLogin() + "!");
+        super("Окно клиента");
         this.currentUser = currentUser;
         dbManager = new DBManager();
         setLayout(new GridBagLayout());
@@ -39,7 +34,7 @@ class ClientWindow extends MainWindow {
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Кнопки
+
         JButton viewCarsButton = new JButton("Просмотреть автомобили");
         JButton createOrderButton = new JButton("Создать заказ на покупку автомобиля");
         JButton viewOrderButton = new JButton("Мои заказы");
@@ -47,7 +42,7 @@ class ClientWindow extends MainWindow {
         JButton createServiceRequestButton = new JButton("Создать запрос на техобслуживание");
         JButton changePasswordButton = new JButton("Сменить пароль");
 
-        // Обработчики кнопок
+
         viewCarsButton.addActionListener(e -> {
             CarsWindow carsWindow = new CarsWindow();
             carsWindow.setVisible(true);
@@ -64,7 +59,8 @@ class ClientWindow extends MainWindow {
         });
 
         viewPurchasesButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Окно просмотра покупок ещё не реализовано.");
+            MyPurchasesWindow purchasesWindow = new MyPurchasesWindow(currentUser.getId());
+            purchasesWindow.setVisible(true);
         });
 
         createServiceRequestButton.addActionListener(e -> {
@@ -72,10 +68,18 @@ class ClientWindow extends MainWindow {
         });
 
         changePasswordButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Окно смены пароля ещё не реализовано.");
+            ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId(), dbManager);
+            dialog.setVisible(true);
+
+            if (dialog.isPasswordChanged()) {
+                dispose();
+                SwingUtilities.invokeLater(() -> new LoginWindow(dbManager).setVisible(true));
+            }
         });
 
-        // Добавляем кнопки на форму
+        JButton exitButton = new JButton("Выход");
+        exitButton.addActionListener(e -> dispose());
+
         gbc.gridx = 0;
         gbc.gridy = 0;
         add(viewCarsButton, gbc);
@@ -94,34 +98,64 @@ class ClientWindow extends MainWindow {
 
         gbc.gridy++;
         add(changePasswordButton, gbc);
+
+        gbc.gridy++;
+        add(exitButton, gbc);
     }
 }
 // Окно для менеджера
 class ManagerWindow extends MainWindow {
     private User currentUser;
+    private DBManager dbManager;
     private SalesMonitoringWindow monitoringWindow;
     public ManagerWindow(User currentUser) {
-        super("Окно менеджера", "Добро пожаловать, Менеджер!");
+        super("Окно менеджера");
         this.currentUser = currentUser;
         this.monitoringWindow = new SalesMonitoringWindow();
+        this.dbManager = new DBManager();
+
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
         JButton openMonitoringButton = new JButton("Мониторинг продаж и сервисного обслуживания");
-        openMonitoringButton.setFont(new Font("Serif", Font.BOLD, 16));
         openMonitoringButton.addActionListener(e -> {
             monitoringWindow.setVisible(true);
         });
 
         JButton processOrdersButton = new JButton("Заказы");
-        processOrdersButton.setFont(new Font("Serif", Font.BOLD, 16));
         processOrdersButton.addActionListener(e -> {
             ManageOrdersWindow manageOrdersWindow = new ManageOrdersWindow(monitoringWindow);
             manageOrdersWindow.setVisible(true);
         });
 
-        JPanel panel = new JPanel();
-        panel.add(openMonitoringButton);
-        panel.add(processOrdersButton);
+        JButton changePassword = new JButton("Сменить пароль");
+        changePassword.addActionListener(e -> {
+            ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId(), dbManager);
+            dialog.setVisible(true);
 
-        getContentPane().add(panel, BorderLayout.SOUTH);
+            if (dialog.isPasswordChanged()) {
+                dispose();
+                SwingUtilities.invokeLater(() -> new LoginWindow(dbManager).setVisible(true));
+            }
+        });
+
+        JButton exitButton = new JButton("Выход");
+        exitButton.addActionListener(e -> dispose());
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        add(openMonitoringButton, gbc);
+
+        gbc.gridy++;
+        add(processOrdersButton, gbc);
+
+        gbc.gridy++;
+        add(changePassword, gbc);
+
+        gbc.gridy++;
+        add(exitButton, gbc);
     }
 }
 
@@ -129,27 +163,34 @@ class ManagerWindow extends MainWindow {
 class AdminWindow extends MainWindow {
     private final User currentUser;
     public AdminWindow(User currentUser) {
-        super("Окно администратора", "Добро пожаловать, Администратор!");
+        super("Окно администратора");
         this.currentUser = currentUser;
-        JButton manageUsersButton = new JButton("Управление пользователями");
-        manageUsersButton.setFont(new Font("Serif", Font.PLAIN, 18));
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        JButton manageUsersButton = new JButton("Управление пользователями");
         manageUsersButton.addActionListener(e -> {
             UserManagement userManagementWindow = new UserManagement();
             userManagementWindow.setVisible(true);
         });
 
-
         JButton backupButton = new JButton("Создать резервную копию базы данных");
-        backupButton.setFont(new Font("Serif", Font.PLAIN, 18));
         backupButton.addActionListener(e -> BackupManager.createBackupWithProgress(AdminWindow.this));
 
+        JButton exitButton = new JButton("Выход");
+        exitButton.addActionListener(e -> dispose());
 
-        JPanel panel = new JPanel();
-        panel.add(manageUsersButton);
-        panel.add(backupButton);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        add(manageUsersButton, gbc);
 
-        getContentPane().add(panel, BorderLayout.CENTER);
+        gbc.gridy++;
+        add(backupButton, gbc);
+
+        gbc.gridy++;
+        add(exitButton, gbc);
     }
 }
 
@@ -199,7 +240,7 @@ class UserManagement extends JFrame {
         JButton changeRoleButton = new JButton("Изменить роль");
         JButton deleteButton = new JButton("Удалить");
         JButton refreshButton = new JButton("Обновить");
-        JButton logoutButton = new JButton("Выход");
+        JButton exitButton = new JButton("Назад");
         JButton blockButton = new JButton("Заблокировать");
         JButton unblockButton = new JButton("Разблокировать");
 
@@ -209,7 +250,7 @@ class UserManagement extends JFrame {
         blockButton.addActionListener(e -> changeBlockStatus(1));
         unblockButton.addActionListener(e -> changeBlockStatus(0));
         refreshButton.addActionListener(e -> loadUsersFromDatabase());
-        logoutButton.addActionListener(e -> System.exit(0));
+        exitButton.addActionListener(e -> dispose());
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(addButton);
@@ -218,7 +259,7 @@ class UserManagement extends JFrame {
         buttonPanel.add(blockButton);
         buttonPanel.add(unblockButton);
         buttonPanel.add(refreshButton);
-        buttonPanel.add(logoutButton);
+        buttonPanel.add(exitButton);
 
         // Основная компоновка
         JPanel mainPanel = new JPanel(new BorderLayout(5, 5));
@@ -483,15 +524,18 @@ class SalesMonitoringWindow extends JFrame {
         JButton addButton = new JButton("Добавить");
         JButton editButton = new JButton("Редактировать");
         JButton deleteButton = new JButton("Удалить");
+        JButton exitButton = new JButton("Назад");
 
         // Слушатели кнопок
         addButton.addActionListener(e -> addRow(model, entityName));
         editButton.addActionListener(e -> editRow(model, table, entityName));
         deleteButton.addActionListener(e -> deleteRow(model, table));
+        exitButton.addActionListener(e -> dispose());
 
         buttonsPanel.add(addButton);
         buttonsPanel.add(editButton);
         buttonsPanel.add(deleteButton);
+        buttonsPanel.add(exitButton);
 
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
@@ -569,14 +613,14 @@ class CarsWindow extends JFrame {
         searchPanel.add(searchLabel);
         searchPanel.add(searchField);
         add(searchPanel, BorderLayout.NORTH);
-
+        JButton exitButton = new JButton("Назад");
+        exitButton.addActionListener(e -> dispose());
+        add(exitButton, BorderLayout.SOUTH);
         // Таблица автомобилей
         String[] columnNames = {"Марка", "Модель", "Год", "Цена", "Гарантия на сервисное обслуживание(лет)", "Наличие"};
         carsTable = new JTable(new DefaultTableModel(columnNames, 0));
         JScrollPane scrollPane = new JScrollPane(carsTable);
         add(scrollPane, BorderLayout.CENTER);
-
-
 
         loadCarsData();
 
@@ -654,13 +698,21 @@ class CreateOrderWindow extends JFrame {
 
         loadCarsData();
 
+
         // Кнопка оформления заказа
+        JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 0, 2)); // 5 — отступ между кнопками
+
         JButton orderButton = new JButton("Оформить заказ");
-        add(orderButton, BorderLayout.SOUTH);
+        JButton exitButton = new JButton("Назад");
 
-        // Обработка нажатия кнопки
+        buttonPanel.add(orderButton);
+        buttonPanel.add(exitButton);
+
+        add(buttonPanel, BorderLayout.SOUTH);
+
+// Обработка нажатия кнопок
         orderButton.addActionListener(this::handleCreateOrder);
-
+        exitButton.addActionListener(e -> dispose());
         // Фильтр поиска
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) { filter(); }
@@ -678,7 +730,7 @@ class CreateOrderWindow extends JFrame {
 
     private void loadCarsData() {
         try (Connection conn = dbManager.getDbConnection()) {
-            String sql = "SELECT id, brand, model, year, price, warranty_years, available FROM cars WHERE available = TRUE";
+            String sql = "SELECT id, brand, model, year, price, warranty_years, available FROM cars WHERE available = true";
             try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
                 DefaultTableModel model = (DefaultTableModel) carsTable.getModel();
                 while (rs.next()) {
@@ -706,23 +758,21 @@ class CreateOrderWindow extends JFrame {
         }
 
         int modelRow = carsTable.convertRowIndexToModel(row);
-        int carId = (int) carsTable.getModel().getValueAt(modelRow, 0); // ID авто
-        double price = (double) carsTable.getModel().getValueAt(modelRow, 4); // Цена авто
+
+
+        String brand = (String) carsTable.getValueAt(modelRow, 1);
+        String modelName = (String) carsTable.getValueAt(modelRow, 2);
+        double price = (double) carsTable.getValueAt(modelRow, 4);
+
+        // Получим ID машины
+        int carId = dbManager.getCarIdByBrandAndModel(brand, modelName);
 
         // Ввод способа оплаты
         String[] methods = {"Наличные", "Карта", "Кредит", "Другое"};
-        String paymentMethod = (String) JOptionPane.showInputDialog(
-                this,
-                "Выберите способ оплаты:",
-                "Способ оплаты",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                methods,
-                methods[0]);
+        String paymentMethod = showPaymentDialog(methods);
 
         if (paymentMethod == null) {
-            // Пользователь отменил выбор
-            return;
+            return; // Пользователь отменил
         }
 
         try (Connection conn = dbManager.getDbConnection();
@@ -740,12 +790,22 @@ class CreateOrderWindow extends JFrame {
             stmt.executeUpdate();
 
             JOptionPane.showMessageDialog(this, "Заказ успешно оформлен!");
-            dispose();
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Ошибка при оформлении заказа: " + ex.getMessage());
         }
     }
+    private String showPaymentDialog(String[] methods) {
+        String paymentMethod = (String) JOptionPane.showInputDialog(
+                this,
+                "Выберите способ оплаты:",
+                "Способ оплаты",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                methods,
+                methods[0]);
 
+        return paymentMethod; // Возвращаем выбранный способ оплаты
+    }
 }
 
 class MyOrdersWindow extends JFrame {
@@ -770,9 +830,15 @@ class MyOrdersWindow extends JFrame {
         add(scrollPane, BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton updateButton = new JButton("Обновить");
         JButton cancelButton = new JButton("Отменить заказ");
+        JButton exitButton = new JButton("Назад");
+        updateButton.addActionListener(e -> loadOrdersData(clientId));
         cancelButton.addActionListener(e -> cancelSelectedOrder());
+        exitButton.addActionListener(e -> dispose());
+        buttonPanel.add(updateButton);
         buttonPanel.add(cancelButton);
+        buttonPanel.add(exitButton);
         add(buttonPanel, BorderLayout.SOUTH);
 
         loadOrdersData(clientId);
@@ -877,15 +943,25 @@ class ManageOrdersWindow extends JFrame {
         JScrollPane scrollPane = new JScrollPane(ordersTable);
         add(scrollPane, BorderLayout.CENTER);
 
+
+
+
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton approveButton = new JButton("Подтвердить");
         JButton rejectButton = new JButton("Отклонить");
+        JButton updateButton = new JButton("Обновить");
+        JButton exitButton = new JButton("Назад");
+
 
         approveButton.addActionListener(e -> updateOrderStatus("Подтверждён"));
         rejectButton.addActionListener(e -> updateOrderStatus("Отклонён"));
+        updateButton.addActionListener(e -> loadOrdersData());
+        exitButton.addActionListener(e -> dispose());
 
         buttonPanel.add(approveButton);
         buttonPanel.add(rejectButton);
+        buttonPanel.add(updateButton);
+        buttonPanel.add(exitButton);
         add(buttonPanel, BorderLayout.SOUTH);
 
         loadOrdersData();
@@ -940,6 +1016,27 @@ class ManageOrdersWindow extends JFrame {
         }
 
         int orderId = (int) model.getValueAt(modelRow, 0);
+        int clientId = (int) model.getValueAt(modelRow, 1);
+        String brand = (String) model.getValueAt(modelRow, 2);
+        String modelName = (String) model.getValueAt(modelRow, 3);
+        double price = (double) model.getValueAt(modelRow, 5);
+
+        // Получим ID машины
+        int carId = dbManager.getCarIdByBrandAndModel(brand, modelName);
+
+
+        String checkAvailability = "SELECT available FROM cars WHERE id = ?";
+        try (Connection conn = dbManager.getDbConnection();
+        PreparedStatement checkStmt = conn.prepareStatement(checkAvailability)) {
+            checkStmt.setInt(1, carId);
+            ResultSet rs = checkStmt.executeQuery();
+            if (rs.next() && rs.getInt("available") == 0) {
+                JOptionPane.showMessageDialog(this, "Автомобиль \"" + brand + " " + modelName + "\" больше не доступен.");
+                return;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
         String updateSql = "UPDATE orders_to_sales SET status = ? WHERE id = ?";
         try (Connection conn = dbManager.getDbConnection();
@@ -949,18 +1046,10 @@ class ManageOrdersWindow extends JFrame {
             updateStmt.setInt(2, orderId);
             updateStmt.executeUpdate();
 
+
+
             // Если заказ подтвержден — вставим запись в таблицу sales
             if ("Подтверждён".equals(newStatus)) {
-                // Получаем данные заказа
-                int clientId = (int) model.getValueAt(modelRow, 1);
-                String brand = (String) model.getValueAt(modelRow, 2);
-                String modelName = (String) model.getValueAt(modelRow, 3);
-                double price = (double) model.getValueAt(modelRow, 5);
-
-                // Получим ID машины
-                int carId = dbManager.getCarIdByBrandAndModel(brand, modelName);
-
-                // Вставим в таблицу продаж
                 String insertSale = "INSERT INTO sales (car_id, client_id, sale_date, sale_price) VALUES (?, ?, CURRENT_DATE, ?)";
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSale)) {
                     insertStmt.setInt(1, carId);
@@ -974,6 +1063,19 @@ class ManageOrdersWindow extends JFrame {
                 try (PreparedStatement carStmt = conn.prepareStatement(updateCarQty)) {
                     carStmt.setInt(1, carId);
                     carStmt.executeUpdate();
+                }
+
+                String checkQtySql = "SELECT quantity FROM cars WHERE id = ?";
+                try (PreparedStatement checkStmt = conn.prepareStatement(checkQtySql)) {
+                    checkStmt.setInt(1, carId);
+                    ResultSet rs = checkStmt.executeQuery();
+                    if (rs.next() && rs.getInt("quantity") == 0) {
+                        String updateAvailable = "UPDATE cars SET available = 0 WHERE id = ?";
+                        try (PreparedStatement availableStmt = conn.prepareStatement(updateAvailable)) {
+                            availableStmt.setInt(1, carId);
+                            availableStmt.executeUpdate();
+                        }
+                    }
                 }
 
                 // Обновим мониторинг
@@ -990,4 +1092,135 @@ class ManageOrdersWindow extends JFrame {
         }
     }
 
+}
+
+
+class ChangePasswordDialog extends JDialog {
+    private JPasswordField oldPasswordField;
+    private JPasswordField newPasswordField;
+    private JPasswordField confirmPasswordField;
+    private final DBManager dbManager;
+    private final int userId; // ID текущего пользователя
+    private boolean passwordChanged;
+
+    public ChangePasswordDialog(JFrame parent, int userId, DBManager dbManager) {
+        super(parent, "Сменить пароль", true);
+        this.userId = userId;
+        this.dbManager = dbManager;
+
+        setSize(350, 250);
+        setLocationRelativeTo(parent);
+        setLayout(new GridLayout(4, 2, 10, 10));
+
+        add(new JLabel("Старый пароль:"));
+        oldPasswordField = new JPasswordField();
+        add(oldPasswordField);
+
+        add(new JLabel("Новый пароль:"));
+        newPasswordField = new JPasswordField();
+        add(newPasswordField);
+
+        add(new JLabel("Подтвердите новый:"));
+        confirmPasswordField = new JPasswordField();
+        add(confirmPasswordField);
+
+        JButton changeButton = new JButton("Сменить");
+        JButton cancelButton = new JButton("Отмена");
+
+        changeButton.addActionListener(e -> changePassword());
+        cancelButton.addActionListener(e -> dispose());
+
+        add(changeButton);
+        add(cancelButton);
+    }
+
+    private void changePassword() {
+        String oldPass = new String(oldPasswordField.getPassword());
+        String newPass = new String(newPasswordField.getPassword());
+        String confirmPass = new String(confirmPasswordField.getPassword());
+
+        if (oldPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Пожалуйста, заполните все поля.");
+            return;
+        }
+
+        if (!newPass.equals(confirmPass)) {
+            JOptionPane.showMessageDialog(this, "Новый пароль и подтверждение не совпадают.");
+            return;
+        }
+
+        boolean success = dbManager.updatePassword(userId, oldPass, newPass);
+        if (success) {
+            passwordChanged = true;
+            JOptionPane.showMessageDialog(this, "Пароль успешно изменён. Войдите заново.");
+            dispose();
+        } else {
+            JOptionPane.showMessageDialog(this, "Старый пароль неверен.");
+        }
+    }
+
+    public boolean isPasswordChanged() {
+        return passwordChanged;
+    }
+}
+class MyPurchasesWindow extends JFrame {
+    private JTable purchasesTable;
+    private DefaultTableModel model;
+    private DBManager dbManager;
+    private int clientId;
+
+    public MyPurchasesWindow(int clientId) {
+        this.clientId = clientId;
+        dbManager = new DBManager();
+
+        setTitle("Мои покупки");
+        setSize(900, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+        JButton exitButton = new JButton("Назад");
+        exitButton.addActionListener(e -> dispose());
+        add(exitButton, BorderLayout.SOUTH);
+
+        String[] columnNames = {
+                "Марка", "Модель", "Год", "Цена", "Способ оплаты", "Дата покупки"
+        };
+        model = new DefaultTableModel(columnNames, 0);
+        purchasesTable = new JTable(model);
+        add(new JScrollPane(purchasesTable), BorderLayout.CENTER);
+
+        loadPurchases();
+    }
+
+    private void loadPurchases() {
+        String query = """
+            SELECT c.brand, c.model, c.year, o.total_price, o.payment_method, o.order_date
+            FROM orders_to_sales o
+            JOIN cars c ON o.car_id = c.id
+            WHERE o.client_id = ? AND o.status = 'Подтверждён'
+            ORDER BY o.order_date DESC
+        """;
+
+        try (Connection conn = dbManager.getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, clientId);
+            ResultSet rs = stmt.executeQuery();
+
+            model.setRowCount(0); // очистить таблицу перед добавлением новых данных
+
+            while (rs.next()) {
+                model.addRow(new Object[] {
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("total_price"),
+                        rs.getString("payment_method"),
+                        rs.getDate("order_date")
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Ошибка загрузки покупок: " + e.getMessage());
+        }
+    }
 }

@@ -248,8 +248,42 @@ public class DBManager {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return -1; // или выбросить исключение
+        return -1;
     }
 
+
+    public boolean updatePassword(int userId, String oldPassword, String newPassword) {
+        String checkSql = "SELECT password_hash FROM users WHERE id = ?";
+        String updateSql = "UPDATE users SET password_hash = ? WHERE id = ?";
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+
+            checkStmt.setInt(1, userId);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                String currentPass = rs.getString("password_hash");
+                oldPassword = hashPassword(oldPassword);
+                if (!currentPass.equals(oldPassword)) {
+                    return false; // неверный старый пароль
+                }
+
+                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                    newPassword = hashPassword(newPassword);
+                    updateStmt.setString(1, newPassword);
+                    updateStmt.setInt(2, userId);
+                    updateStmt.executeUpdate();
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
+
+
+
 
