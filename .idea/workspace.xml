@@ -4,23 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="+ functionality of client + manager">
+    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="changePassword + MyPurchases + some refactoring(add buttons on windows)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dfggg.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/LoginWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/LoginWindow.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainServer.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainServer.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/model/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/model/User.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ClientHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ClientSender.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserSender.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DBManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DBManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/LoginWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/LoginWindow.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/MainServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MainWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainWindow.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UserHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UserSender.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserSender.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/User.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -57,7 +54,9 @@
   &quot;associatedIndex&quot;: 7
 }</component>
   <component name="ProjectId" id="2vRuvr0MMkA8O8h6SEydtjbXhxZ" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -67,6 +66,7 @@
     &quot;Application.LoginWindow.executor&quot;: &quot;Run&quot;,
     &quot;Application.MainServer.executor&quot;: &quot;Run&quot;,
     &quot;Application.MainWindow.executor&quot;: &quot;Run&quot;,
+    &quot;Application.UserLogin.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
@@ -84,6 +84,26 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RunManager" selected="Application.UserLogin">
+    <configuration name="MainServer" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="MainServer" />
+      <module name="Car_Server" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="UserLogin" type="Application" factoryName="Application" singleton="false">
+      <option name="MAIN_CLASS_NAME" value="LoginWindow" />
+      <module name="Car_Server" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.UserLogin" />
+      <item itemvalue="Application.MainServer" />
+    </list>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -111,6 +131,11 @@
       <workItem from="1745846928470" duration="6303000" />
       <workItem from="1745869524239" duration="13000" />
       <workItem from="1746093059074" duration="11437000" />
+      <workItem from="1746128981147" duration="300000" />
+      <workItem from="1746271912268" duration="9764000" />
+      <workItem from="1746378445642" duration="8399000" />
+      <workItem from="1746452235436" duration="1601000" />
+      <workItem from="1746460865365" duration="17764000" />
     </task>
     <task id="LOCAL-00001" summary="08.04">
       <option name="closed" value="true" />
@@ -168,7 +193,23 @@
       <option name="project" value="LOCAL" />
       <updated>1745784055152</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="orders+sales">
+      <option name="closed" value="true" />
+      <created>1746129033534</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1746129033534</updated>
+    </task>
+    <task id="LOCAL-00009" summary="changePassword + MyPurchases + some refactoring(add buttons on windows)">
+      <option name="closed" value="true" />
+      <created>1746392126750</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1746392126750</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -179,7 +220,9 @@
     <MESSAGE value="admins features" />
     <MESSAGE value="backup database" />
     <MESSAGE value="+ functionality of client + manager" />
-    <option name="LAST_COMMIT_MESSAGE" value="+ functionality of client + manager" />
+    <MESSAGE value="orders+sales" />
+    <MESSAGE value="changePassword + MyPurchases + some refactoring(add buttons on windows)" />
+    <option name="LAST_COMMIT_MESSAGE" value="changePassword + MyPurchases + some refactoring(add buttons on windows)" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

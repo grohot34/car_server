@@ -1,3 +1,5 @@
+import Request_Response.Request;
+import Request_Response.Response;
 import model.User;
 
 import javax.swing.*;
@@ -34,44 +36,29 @@ public class LoginWindow extends JFrame {
     private void handleAuth(String commandType, DBManager dbManager) {
         String login = loginField.getText();
         String password = new String(passwordField.getPassword());
+
         if (login.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Поля не должны быть пустыми!");
             return;
         }
 
-        if (dbManager.isUserBlocked(login)) {
-            JOptionPane.showMessageDialog(this, "Ваша учетная запись заблокирована. Обратитесь к администратору.");
-            return;
-        }
+        Request request = new Request(commandType, new String[]{login, password});
+        Response response = UserSender.sendRequest(request);
 
-        String role = dbManager.getUserRoleByLogin(login);
-        int id = dbManager.getUserIdByLogin(login);
-        System.out.println(role);
-        String command = commandType + ":" + login + ":" + password;
-        String response = UserSender.sendCommand(command);
-
-        User user = new User(id, login, role);
-        if (response.startsWith("SUCCESS")) {
+        if (response.isSuccess()) {
+            User user = (User) response.getData();
             JOptionPane.showMessageDialog(this, "Успешно!");
-            switch (role) {
-                case "CLIENT":
-                    ClientWindow clientWindow = new ClientWindow(user);
-                    clientWindow.setVisible(true);
-                    break;
-                case "ADMIN":
-                    AdminWindow adminWindow = new AdminWindow(user);
-                    adminWindow.setVisible(true);
-                    break;
-                case "MANAGER":
-                    ManagerWindow managerWindow = new ManagerWindow(user);
-                    managerWindow.setVisible(true);
-                    break;
-                    default: JOptionPane.showMessageDialog(this, "Неизвестная роль: " + role);
+
+            switch (user.getRole()) {
+                case "CLIENT" -> new ClientWindow(user).setVisible(true);
+                case "ADMIN" -> new AdminWindow(user).setVisible(true);
+                case "MANAGER" -> new ManagerWindow(user).setVisible(true);
+                default -> JOptionPane.showMessageDialog(this, "Неизвестная роль: " + user.getRole());
             }
-            // Закрытие окна авторизации
+
             this.dispose();
         } else {
-            JOptionPane.showMessageDialog(this, "Ошибка: " + response);
+            JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
         }
     }
 

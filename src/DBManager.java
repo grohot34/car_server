@@ -1,14 +1,14 @@
+import model.Car;
+import model.Order;
+import model.OrderInfo;
 import model.User;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.ArrayList;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 
 public class DBManager {
     private static final String HOST = "localhost";
@@ -282,6 +282,106 @@ public class DBManager {
         }
         return false;
     }
+
+    public List<Car> getAllCars() {
+        List<Car> cars = new ArrayList<>();
+        try (Connection conn = getDbConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT * FROM cars")) {
+
+            while (rs.next()) {
+                cars.add(new Car(
+                        rs.getInt("id"),
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("price"),
+                        rs.getInt("warranty_years"),
+                        rs.getBoolean("available")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return cars;
+    }
+
+    public boolean createOrder(Order order) {
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO orders_to_sales (client_id, car_id, order_date, status, payment_method, total_price) " +
+                             "VALUES (?, ?, ?, ?, ?, ?)")) {
+
+            stmt.setInt(1, order.getClientId());
+            stmt.setInt(2, order.getCarId());
+            stmt.setDate(3, java.sql.Date.valueOf(order.getOrderDate()));
+            stmt.setString(4, order.getStatus());
+            stmt.setString(5, order.getPaymentMethod());
+            stmt.setDouble(6, order.getTotalPrice());
+            stmt.executeUpdate();
+            return true;
+
+        } catch (SQLException e) {
+            e.printStackTrace();  // Можно также логировать
+            return false;
+        }
+    }
+
+    public List<OrderInfo> getOrdersForClient(int clientId) {
+        // Ваш SQL-запрос, который возвращает информацию о заказах и автомобилях
+        String query = """
+                SELECT o.id, c.brand, c.model, c.year, o.total_price, o.payment_method, o.order_date, o.status
+                FROM orders_to_sales o
+                JOIN cars c ON o.car_id = c.id
+                WHERE o.client_id = ?
+                ORDER BY o.order_date DESC
+                """;
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, clientId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<OrderInfo> orders = new ArrayList<>();
+                while (rs.next()) {
+                    // Создание объекта Order с данными из базы данных
+                    OrderInfo order = new OrderInfo(
+                            rs.getInt("id"),
+                            rs.getString("brand"),
+                            rs.getString("model"),
+                            rs.getInt("year"),
+                            rs.getDouble("total_price"),
+                            rs.getString("payment_method"),
+                            rs.getDate("order_date").toLocalDate(),
+                            rs.getString("status")
+                    );
+                    // Добавление заказа в список
+                    orders.add(order);
+                }
+                return orders;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ArrayList<>(); // Возвращаем пустой список в случае ошибки
+        }
+    }
+    public boolean updateOrderStatus(int orderId) {
+        String sql = "UPDATE orders_to_sales SET status = 'Отменён' WHERE id = ?";
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, orderId);
+
+            int rowsUpdated = stmt.executeUpdate();
+            return rowsUpdated > 0; // Возвращаем true, если заказ был успешно обновлён
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
 }
 
 
