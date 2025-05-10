@@ -4,21 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="changePassword + MyPurchases + some refactoring(add buttons on windows)">
+    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="add server">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dfggg.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AuthManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AuthManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/LoginWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/LoginWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/model/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/model/User.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/AuthManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/AuthManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DBManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DBManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/LoginWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/LoginWindow.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MainWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainWindow.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Request_Response/Response.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Request_Response/Response.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/UserHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/UserSender.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserSender.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/Car.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Car.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/Order.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Order.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/OrderInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/OrderInfo.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/util/BackupManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/util/BackupManager.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,6 +51,10 @@
     &quot;accountId&quot;: &quot;fb1efe7d-fcf4-4be1-934a-86666ee8d657&quot;
   }
 }</component>
+  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
+  <component name="KubernetesApiProvider"><![CDATA[{
+  "isMigrated": true
+}]]></component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
@@ -71,7 +79,7 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Gt/IdeaProjects/Car_Server&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Gt/IdeaProjects/taskTable&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -135,7 +143,12 @@
       <workItem from="1746271912268" duration="9764000" />
       <workItem from="1746378445642" duration="8399000" />
       <workItem from="1746452235436" duration="1601000" />
-      <workItem from="1746460865365" duration="17764000" />
+      <workItem from="1746460865365" duration="18188000" />
+      <workItem from="1746479538111" duration="233000" />
+      <workItem from="1746524179919" duration="918000" />
+      <workItem from="1746557238372" duration="1823000" />
+      <workItem from="1746774700789" duration="18942000" />
+      <workItem from="1746866722786" duration="31420000" />
     </task>
     <task id="LOCAL-00001" summary="08.04">
       <option name="closed" value="true" />
@@ -209,7 +222,23 @@
       <option name="project" value="LOCAL" />
       <updated>1746392126750</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="add server">
+      <option name="closed" value="true" />
+      <created>1746479501576</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1746479501576</updated>
+    </task>
+    <task id="LOCAL-00011" summary="add server">
+      <option name="closed" value="true" />
+      <created>1746479562997</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1746479562997</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -222,7 +251,8 @@
     <MESSAGE value="+ functionality of client + manager" />
     <MESSAGE value="orders+sales" />
     <MESSAGE value="changePassword + MyPurchases + some refactoring(add buttons on windows)" />
-    <option name="LAST_COMMIT_MESSAGE" value="changePassword + MyPurchases + some refactoring(add buttons on windows)" />
+    <MESSAGE value="add server" />
+    <option name="LAST_COMMIT_MESSAGE" value="add server" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

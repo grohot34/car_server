@@ -1,13 +1,15 @@
-import model.Car;
-import model.Order;
-import model.OrderInfo;
-import model.User;
+import model.*;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.io.File;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 public class DBManager {
@@ -305,6 +307,31 @@ public class DBManager {
         }
         return cars;
     }
+    public List<Car> getAllCarsDetailed() {
+        List<Car> cars = new ArrayList<>();
+        try (Connection conn = getDbConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT * FROM cars")) {
+
+            while (rs.next()) {
+                Car car = new Car(
+                        rs.getInt("id"),
+                        rs.getString("vin"),
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("price"),
+                        rs.getInt("warranty_years"),
+                        rs.getBoolean("available"),
+                        rs.getInt("quantity")
+                );
+                cars.add(car);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return cars;
+    }
 
     public boolean createOrder(Order order) {
         try (Connection conn = getDbConnection();
@@ -380,6 +407,559 @@ public class DBManager {
             return false;
         }
     }
+    public List<OrderInfo> getAllOrders() {
+        List<OrderInfo> orders = new ArrayList<>();
+        String query = """
+            SELECT o.id, o.client_id, c.brand, c.model, c.year,
+                   o.total_price, o.payment_method, o.order_date, o.status
+            FROM orders_to_sales o
+            JOIN cars c ON o.car_id = c.id
+            ORDER BY o.order_date DESC
+            """;
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                OrderInfo order = new OrderInfo(
+                        rs.getInt("id"),
+                        rs.getInt("client_id"),
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("total_price"),
+                        rs.getString("payment_method"),
+                        rs.getDate("order_date").toLocalDate(),
+                        rs.getString("status")
+                );
+                orders.add(order);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+    public boolean updateOrderStatusWithSales(int orderId, String newStatus) {
+        try (Connection conn = getDbConnection()) {
+            conn.setAutoCommit(false);
+
+            // Получение информации о заказе
+            String orderSql = """
+            SELECT o.id, o.client_id, c.brand, c.model, c.year,
+                   o.total_price, o.payment_method, o.order_date, o.status
+            FROM orders_to_sales o
+            JOIN cars c ON o.car_id = c.id
+            WHERE o.id = ?
+            """;
+            int clientId;
+            String brand, model;
+            double price;
+            String currentStatus;
+            try (PreparedStatement stmt = conn.prepareStatement(orderSql)) {
+                stmt.setInt(1, orderId);
+                ResultSet rs = stmt.executeQuery();
+                if (!rs.next()) return false;
+
+                clientId = rs.getInt("client_id");
+                brand = rs.getString("brand");
+                model = rs.getString("model");
+                price = rs.getDouble("total_price");
+                currentStatus = rs.getString("status");
+
+                if (!"Ожидает подтверждения".equals(currentStatus)) {
+                    return false;
+                }
+            }
+
+            // Получаем ID машины
+            int carId = getCarIdByBrandAndModel(brand, model);
+
+            // Проверка доступности
+            try (PreparedStatement checkStmt = conn.prepareStatement("SELECT available FROM cars WHERE id = ?")) {
+                checkStmt.setInt(1, carId);
+                ResultSet rs = checkStmt.executeQuery();
+                if (rs.next() && rs.getInt("available") == 0) {
+                    return false;
+                }
+            }
+
+            // Обновляем статус заказа
+            try (PreparedStatement updateStmt = conn.prepareStatement("UPDATE orders_to_sales SET status = ? WHERE id = ?")) {
+                updateStmt.setString(1, newStatus);
+                updateStmt.setInt(2, orderId);
+                updateStmt.executeUpdate();
+            }
+
+            if ("Подтверждён".equals(newStatus)) {
+                // Добавляем продажу
+                try (PreparedStatement saleStmt = conn.prepareStatement(
+                        "INSERT INTO sales (car_id, client_id, sale_date, sale_price) VALUES (?, ?, CURRENT_DATE, ?)")) {
+                    saleStmt.setInt(1, carId);
+                    saleStmt.setInt(2, clientId);
+                    saleStmt.setDouble(3, price);
+                    saleStmt.executeUpdate();
+                }
+
+                // Уменьшаем количество
+                try (PreparedStatement carStmt = conn.prepareStatement("UPDATE cars SET quantity = quantity - 1 WHERE id = ?")) {
+                    carStmt.setInt(1, carId);
+                    carStmt.executeUpdate();
+                }
+
+                // Проверка количества
+                try (PreparedStatement checkQtyStmt = conn.prepareStatement("SELECT quantity FROM cars WHERE id = ?")) {
+                    checkQtyStmt.setInt(1, carId);
+                    ResultSet rs = checkQtyStmt.executeQuery();
+                    if (rs.next() && rs.getInt("quantity") == 0) {
+                        try (PreparedStatement availableStmt = conn.prepareStatement("UPDATE cars SET available = 0 WHERE id = ?")) {
+                            availableStmt.setInt(1, carId);
+                            availableStmt.executeUpdate();
+                        }
+                    }
+                }
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<Client> getAllClients() {
+        List<Client> clients = new ArrayList<>();
+        String sql = "SELECT id, full_name, phone, email, address FROM clients";
+        try (Connection conn = getDbConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Client client = new Client(
+                        rs.getInt("id"),
+                        rs.getString("full_name"),
+                        rs.getString("phone"),
+                        rs.getString("email"),
+                        rs.getString("address")
+                );
+                clients.add(client);
+                System.out.println(client.getFull_name());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return clients;
+    }
+    public List<Sale> getAllSales() {
+        List<Sale> sales = new ArrayList<>();
+        String sql = "SELECT id, car_id, client_id, sale_date, sale_price FROM sales";
+        try (Connection conn = getDbConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Sale sale = new Sale(
+                        rs.getInt("id"),
+                        rs.getInt("car_id"),
+                        rs.getInt("client_id"),
+                        rs.getDate("sale_date").toLocalDate(),
+                        rs.getDouble("sale_price")
+                );
+                sales.add(sale);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return sales;
+    }
+
+    public List<ServiceRecord> getAllServiceRecords() {
+        List<ServiceRecord> records = new ArrayList<>();
+        String sql = "SELECT id, car_id, client_id, service_date, description, under_warranty FROM service_records";
+        try (Connection conn = getDbConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                ServiceRecord record = new ServiceRecord(
+                        rs.getInt("id"),
+                        rs.getInt("car_id"),
+                        rs.getInt("client_id"),
+                        rs.getDate("service_date").toLocalDate(),
+                        rs.getString("description"),
+                        rs.getBoolean("under_warranty")
+                );
+                records.add(record);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return records;
+    }
+
+    public boolean insertCar(Car car) {
+        String sql = "INSERT INTO cars (vin, brand, model, year, price, warranty_years, available, quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, car.getVIN());
+            stmt.setString(2, car.getBrand());
+            stmt.setString(3, car.getModel());
+            stmt.setInt(4, car.getYear());
+            stmt.setDouble(5, car.getPrice());
+            stmt.setInt(6, car.getWarrantyYears());
+            stmt.setBoolean(7, car.isAvailable());
+            stmt.setInt(8, car.getQuantity());
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateCar(Car car) {
+        System.out.println("Обновляется автомобиль ID=" + car.getId());
+        String sql = "UPDATE cars SET vin = ?,brand = ?, model = ?, year = ?, price = ?, warranty_years = ?, available = ?, quantity = ? WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, car.getVIN());
+            stmt.setString(2, car.getBrand());
+            stmt.setString(3, car.getModel());
+            stmt.setInt(4, car.getYear());
+            stmt.setDouble(5, car.getPrice());
+            stmt.setInt(6, car.getWarrantyYears());
+            stmt.setBoolean(7, car.isAvailable());
+            stmt.setInt(8, car.getQuantity());
+            stmt.setInt(9, car.getId());
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteCar(int carId) {
+        String sql = "DELETE FROM cars WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, carId);
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public boolean insertOrder(OrderInfo order) {
+        String sql = "INSERT INTO orders_to_sales (client_id, car_id, order_date, status, payment_method, total_price) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, order.getClientId());
+            stmt.setInt(2, order.getCarId());
+            stmt.setDate(3, Date.valueOf(order.getOrderDate()));
+            stmt.setString(4, order.getStatus());
+            stmt.setString(5, order.getPaymentMethod());
+            stmt.setDouble(6, order.getTotalPrice());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateOrder(OrderInfo order) {
+        String sql = "UPDATE orders_to_sales SET client_id = ?, car_id = ?, order_date = ?, status = ? payment_method = ? total_price = ? WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, order.getClientId());
+            stmt.setInt(2, order.getCarId());
+            stmt.setDate(3, Date.valueOf(order.getOrderDate()));
+            stmt.setString(4, order.getStatus());
+            stmt.setString(5, order.getPaymentMethod());
+            stmt.setDouble(6, order.getTotalPrice());
+            stmt.setInt(7, order.getId());
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteOrder(int orderId) {
+        String sql = "DELETE FROM orders_to_sales WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, orderId);
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // === Клиенты ===
+    public boolean insertClient(Client client) {
+        String sql = "INSERT INTO clients (name, phone, email, address) VALUES (?, ?, ?, ?)";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, client.getFull_name());
+            stmt.setString(2, client.getPhone());
+            stmt.setString(3, client.getEmail());
+            stmt.setString(4, client.getAddress());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateClient(Client client) {
+        String sql = "UPDATE clients SET name = ?, phone = ?, email = ?, address = ? WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, client.getFull_name());
+            stmt.setString(2, client.getPhone());
+            stmt.setString(3, client.getEmail());
+            stmt.setString(4, client.getAddress());
+            stmt.setInt(5, client.getId());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteClient(int clientId) {
+        String sql = "DELETE FROM clients WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, clientId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // === Продажи ===
+    public boolean insertSale(Sale sale) {
+        String sql = "INSERT INTO sales (car_id, client_id, sale_date, sale_price) VALUES (?, ?, ?, ?)";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, sale.getCar_id());
+            stmt.setInt(2, sale.getClient_id());
+            stmt.setDate(3, Date.valueOf(sale.getSale_date()));
+            stmt.setDouble(4, sale.getSale_price());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateSale(Sale sale) {
+        String sql = "UPDATE sales SET car_id = ?, client_id = ?, sale_date = ?, sale_price = ? WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, sale.getCar_id());
+            stmt.setInt(2, sale.getClient_id());
+            stmt.setDate(3, Date.valueOf(sale.getSale_date()));
+            stmt.setDouble(4, sale.getSale_price());
+            stmt.setInt(5, sale.getId());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteSale(int saleId) {
+        String sql = "DELETE FROM sales WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, saleId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // === Сервисное обслуживание ===
+    public boolean insertServiceRecord(ServiceRecord record) {
+        String sql = "INSERT INTO service_records (car_id, client_id, service_date, description, under_warranty) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, record.getCar_id());
+            stmt.setInt(2, record.getClient_id());
+            stmt.setDate(3, Date.valueOf(record.getService_date()));
+            stmt.setString(4, record.getDescription());
+            stmt.setBoolean(5, record.is_under_warranty());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateServiceRecord(ServiceRecord record) {
+        String sql = "UPDATE service_records SET car_id = ?, client_id = ?,  service_date = ?, description = ?, under_warranty = ? WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, record.getCar_id());
+            stmt.setInt(2, record.getClient_id());
+            stmt.setDate(3, Date.valueOf(record.getService_date()));
+            stmt.setString(4, record.getDescription());
+            stmt.setBoolean(5, record.is_under_warranty());
+            stmt.setInt(6, record.getId());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteServiceRecord(int serviceRecordId) {
+        String sql = "DELETE FROM service_records WHERE id = ?";
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, serviceRecordId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public List<PurchaseInfo> getClientPurchases(int clientId) {
+        List<PurchaseInfo> list = new ArrayList<>();
+        String query = """
+        SELECT c.brand, c.model, c.year, o.total_price, o.payment_method, o.order_date
+        FROM orders_to_sales o
+        JOIN cars c ON o.car_id = c.id
+        WHERE o.client_id = ? AND o.status = 'Подтверждён'
+        ORDER BY o.order_date DESC
+    """;
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, clientId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                PurchaseInfo purchase = new PurchaseInfo(
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("total_price"),
+                        rs.getString("payment_method"),
+                        rs.getDate("order_date").toLocalDate()
+                );
+                list.add(purchase);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    public List<PurchaseInfo> getClientPurchasesWithCarId(int clientId) {
+        List<PurchaseInfo> list = new ArrayList<>();
+        String query = """
+        SELECT c.id AS car_id, c.brand, c.model, c.year, 
+               o.total_price, o.payment_method, o.order_date
+        FROM orders_to_sales o
+        JOIN cars c ON o.car_id = c.id
+        WHERE o.client_id = ? AND o.status = 'Подтверждён'
+        ORDER BY o.order_date DESC
+    """;
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, clientId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                PurchaseInfo purchase = new PurchaseInfo(
+                        rs.getInt("car_id"),                     // <== вот он, car_id
+                        rs.getString("brand"),
+                        rs.getString("model"),
+                        rs.getInt("year"),
+                        rs.getDouble("total_price"),
+                        rs.getString("payment_method"),
+                        rs.getDate("order_date").toLocalDate()
+                );
+
+                list.add(purchase);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public boolean createBackup() {
+        String mysqldumpPath = "\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe\"";
+        String dbUser = "root";
+        String dbPassword = "root";
+        String dbName = "car_dealing";
+
+        // Путь для создания резервной копии — на стороне сервера, в папке backups
+        String backupDirectory = "backups";
+        new File(backupDirectory).mkdirs(); // создать папку, если нет
+
+        String backupPath = backupDirectory + File.separator + dbName + "_backup.sql";
+        String command = String.format("%s -u%s -p%s --add-drop-database --databases %s -r \"%s\"",
+                mysqldumpPath, dbUser, dbPassword, dbName, backupPath);
+
+        try {
+            Process runtimeProcess = Runtime.getRuntime().exec(command);
+            int processComplete = runtimeProcess.waitFor();
+            return processComplete == 0;
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public File getLatestBackupFile() {
+        File backupDir = new File("backups"); // или конкретный путь
+        File[] files = backupDir.listFiles((dir, name) -> name.endsWith(".sql"));
+        if (files == null || files.length == 0) return null;
+        return Arrays.stream(files).max(Comparator.comparing(File::lastModified)).orElse(null);
+    }
+    public boolean createServiceRequest(ServiceRequest request) {
+        String sql = "INSERT INTO service_requests (client_id, car_id, description, request_date, status) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, request.getClientId());
+
+            if (request.getCarId() != null) {
+                stmt.setInt(2, request.getCarId());
+            } else {
+                stmt.setNull(2, Types.INTEGER);
+            }
+
+            stmt.setString(3, request.getDescription());
+            stmt.setTimestamp(4, Timestamp.valueOf(request.getRequestDate()));
+            stmt.setString(5, request.getStatus());
+
+            int rowsInserted = stmt.executeUpdate();
+            return rowsInserted > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 
 
 }

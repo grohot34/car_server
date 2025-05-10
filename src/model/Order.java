@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 public class Order implements Serializable {
     private static final long serialVersionUID = 1L;
+
     private int clientId;
     private int carId;
     private LocalDate orderDate;

@@ -1,6 +1,7 @@
+
 import java.sql.*;
 
-public class AuthManager {
+public class AuthManager{
 
     // Метод для регистрации пользователя
     public static boolean register(DBManager dbManager, String login, String password) {
@@ -31,7 +32,9 @@ public class AuthManager {
         System.out.println("Login");
         String query = "SELECT password_hash FROM users WHERE login = ?";  // Извлекаем только хеш пароля
 
-        try (Connection conn = dbManager.getDbConnection(); // Используем переданный объект DBManager
+        try (Connection conn = dbManager.getDbConnection();
+
+             // Используем переданный объект DBManage
              PreparedStatement ps = conn.prepareStatement(query)) {
             System.out.println("In try");
             ps.setString(1, login);

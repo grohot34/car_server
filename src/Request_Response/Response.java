@@ -7,6 +7,7 @@ public class Response implements Serializable {
     private boolean success;
     private Object data;
     private String message;
+    private String status;
 
     public Response(boolean success, Object data, String message) {
         this.success = success;
@@ -24,5 +25,8 @@ public class Response implements Serializable {
 
     public String getMessage() {
         return message;
+    }
+    public String getStatus() {
+        return status;
     }
 }

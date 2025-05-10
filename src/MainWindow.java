@@ -1,9 +1,6 @@
 import Request_Response.Request;
 import Request_Response.Response;
-import model.Car;
-import model.Order;
-import model.OrderInfo;
-import model.User;
+import model.*;
 import util.BackupManager;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -17,8 +14,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 
 public class MainWindow extends JFrame {
@@ -116,11 +115,12 @@ class ClientWindow extends MainWindow {
         });
 
         createServiceRequestButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Окно запроса на техобслуживание ещё не реализовано.");
+            CreateServiceRequestWindow createServiceRequestWindow = new CreateServiceRequestWindow(currentUser.getId());
+            createServiceRequestWindow.setVisible(true);
         });
 
         changePasswordButton.addActionListener(e -> {
-            ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId(), dbManager);
+            ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId());
             dialog.setVisible(true);
 
             if (dialog.isPasswordChanged()) {
@@ -178,13 +178,24 @@ class ManagerWindow extends MainWindow {
 
         JButton processOrdersButton = new JButton("Заказы");
         processOrdersButton.addActionListener(e -> {
-            ManageOrdersWindow manageOrdersWindow = new ManageOrdersWindow(monitoringWindow);
-            manageOrdersWindow.setVisible(true);
+            try {
+                List<OrderInfo> orders = UserSender.getAllOrders();
+                if (!orders.isEmpty()) {
+                    ManageOrdersWindow manageOrdersWindow = new ManageOrdersWindow(orders, monitoringWindow);
+                    manageOrdersWindow.setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Нет заказов для отображения.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Ошибка при получении заказов: " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
+
 
         JButton changePassword = new JButton("Сменить пароль");
         changePassword.addActionListener(e -> {
-            ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId(), dbManager);
+            ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId());
             dialog.setVisible(true);
 
             if (dialog.isPasswordChanged()) {
@@ -229,7 +240,44 @@ class AdminWindow extends MainWindow {
         });
 
         JButton backupButton = new JButton("Создать резервную копию базы данных");
-        backupButton.addActionListener(e -> BackupManager.createBackupWithProgress(AdminWindow.this));
+        backupButton.addActionListener(e -> {
+            // Диалог с прогрессбаром
+            JDialog progressDialog = new JDialog(AdminWindow.this, "Создание резервной копии", true);
+            JProgressBar progressBar = new JProgressBar();
+            progressBar.setIndeterminate(true);
+            progressBar.setString("Создание резервной копии...");
+            progressBar.setStringPainted(true);
+            progressDialog.add(progressBar);
+            progressDialog.setSize(300, 100);
+            progressDialog.setLocationRelativeTo(AdminWindow.this);
+
+            SwingWorker<Void, Void> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() {
+                    Response response = UserSender.createBackup();
+                    if (response.isSuccess()) {
+                        JOptionPane.showMessageDialog(AdminWindow.this, response.getMessage(), "Успех", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(AdminWindow.this, response.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    }
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    progressDialog.dispose();
+                }
+
+            };
+
+            worker.execute();
+            progressDialog.setVisible(true);
+
+        });
+        JButton downloadBackupButton = new JButton("Скачать резервную копию");
+        downloadBackupButton.addActionListener(e -> UserSender.downloadBackup(AdminWindow.this));
+
+
 
         JButton exitButton = new JButton("Выход");
         exitButton.addActionListener(e -> dispose());
@@ -240,6 +288,9 @@ class AdminWindow extends MainWindow {
 
         gbc.gridy++;
         add(backupButton, gbc);
+
+        gbc.gridy++;
+        add(downloadBackupButton, gbc);
 
         gbc.gridy++;
         add(exitButton, gbc);
@@ -301,7 +352,7 @@ class UserManagement extends JFrame {
         deleteButton.addActionListener(e -> deleteUser());
         blockButton.addActionListener(e -> changeBlockStatus(1));
         unblockButton.addActionListener(e -> changeBlockStatus(0));
-        refreshButton.addActionListener(e -> loadUsersFromDatabase());
+        refreshButton.addActionListener(e -> loadUsersFromServer());
         exitButton.addActionListener(e -> dispose());
 
         JPanel buttonPanel = new JPanel();
@@ -341,103 +392,81 @@ class UserManagement extends JFrame {
         roleFilterBox.addActionListener(e -> filter());
 
         // Первичная загрузка данных
-        loadUsersFromDatabase();
+        loadUsersFromServer();
     }
 
-    // Метод для добавления пользователя в таблицу
-    private void addUserToTable(int id, String username, String role) {
-        tableModel.addRow(new Object[]{id, username, role});
-    }
-
-    private void loadUsersFromDatabase() {
-        DBManager dbManager = new DBManager();
-        ArrayList<User> users = dbManager.getUsers();
-
-        tableModel.setRowCount(0); // очистка старых данных
+    private void loadUsersFromServer() {
+        List<User> users = UserSender.getAllUsers();
+        tableModel.setRowCount(0); // очистка
         for (User user : users) {
             tableModel.addRow(new Object[]{
-                    user.getId(), user.getLogin(), user.getRole(), user.isBlocked()
+                    user.getId(),
+                    user.getLogin(),
+                    user.getRole(),
+                    user.isBlocked() ? "Да" : "Нет"
             });
         }
     }
 
+
     private void showAddUserDialog() {
-        DBManager dbManager = new DBManager();
-        String previousLogin = "";
+        JTextField loginField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        String[] roles = {"client", "manager", "admin"};
+        JComboBox<String> roleBox = new JComboBox<>(roles);
 
-        while (true) {
-            JTextField loginField = new JTextField(previousLogin);
-            JPasswordField passwordField = new JPasswordField();
-            String[] roles = {"CLIENT", "ADMIN", "MANAGER"};
-            JComboBox<String> roleBox = new JComboBox<>(roles);
+        JPanel panel = new JPanel(new GridLayout(3, 2));
+        panel.add(new JLabel("Логин:"));
+        panel.add(loginField);
+        panel.add(new JLabel("Пароль:"));
+        panel.add(passwordField);
+        panel.add(new JLabel("Роль:"));
+        panel.add(roleBox);
 
-            JPanel panel = new JPanel(new GridLayout(0, 1));
-            panel.add(new JLabel("Логин:"));
-            panel.add(loginField);
-            panel.add(new JLabel("Пароль:"));
-            panel.add(passwordField);
-            panel.add(new JLabel("Роль:"));
-            panel.add(roleBox);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Добавить пользователя",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
-            int result = JOptionPane.showConfirmDialog(this, panel, "Добавить пользователя",
-                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-            if (result != JOptionPane.OK_OPTION) {
-                break;
-            }
-
+        if (result == JOptionPane.OK_OPTION) {
             String login = loginField.getText().trim();
-            String password = new String(passwordField.getPassword());
+            String password = new String(passwordField.getPassword()).trim();
             String role = (String) roleBox.getSelectedItem();
 
-            previousLogin = login; // сохраняем введённый логин
-
             if (login.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Логин и пароль не должны быть пустыми.",
-                        "Ошибка", JOptionPane.ERROR_MESSAGE);
-                continue;
+                JOptionPane.showMessageDialog(this, "Все поля должны быть заполнены.");
+                return;
             }
 
-            if (dbManager.doesLoginExist(login)) {
-                JOptionPane.showMessageDialog(this, "Пользователь с таким логином уже существует. Введите другой логин.",
-                        "Ошибка", JOptionPane.WARNING_MESSAGE);
-                continue;
+            Response response = UserSender.insertUser(login, password, role);
+            if (response.isSuccess()) {
+                JOptionPane.showMessageDialog(this, "Пользователь успешно добавлен.");
+                loadUsersFromServer();
+            } else {
+                JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
             }
-
-            dbManager.insertUserWithRole(login, password, role);
-            loadUsersFromDatabase();
-            break;
         }
     }
 
     private void changeUserRole() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Выберите пользователя из таблицы.",
-                    "Ошибка", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Выберите пользователя.");
             return;
         }
 
         int userId = (int) tableModel.getValueAt(selectedRow, 0);
         String currentRole = (String) tableModel.getValueAt(selectedRow, 2);
 
-        String[] roles = {"CLIENT", "ADMIN", "MANAGER"};
-        JComboBox<String> roleBox = new JComboBox<>(roles);
-        roleBox.setSelectedItem(currentRole);
+        String[] roles = {"CLIENT", "MANAGER", "ADMIN"};
+        String newRole = (String) JOptionPane.showInputDialog(this, "Выберите новую роль:",
+                "Изменить роль", JOptionPane.PLAIN_MESSAGE, null, roles, currentRole);
 
-        int result = JOptionPane.showConfirmDialog(this, roleBox, "Выберите новую роль",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-        if (result == JOptionPane.OK_OPTION) {
-            String newRole = (String) roleBox.getSelectedItem();
-
-            if (!newRole.equals(currentRole)) {
-                DBManager dbManager = new DBManager();
-                dbManager.updateUserRole(userId, newRole);
-                loadUsersFromDatabase();
+        if (newRole != null && !newRole.equals(currentRole)) {
+            Response response = UserSender.updateUserRole(userId, newRole);
+            if (response.isSuccess()) {
+                JOptionPane.showMessageDialog(this, "Роль успешно обновлена.");
+                loadUsersFromServer();
             } else {
-                JOptionPane.showMessageDialog(this, "Роль не изменилась.", "Информация",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Ошибка при обновлении роли: " + response.getMessage());
             }
         }
     }
@@ -445,20 +474,22 @@ class UserManagement extends JFrame {
     private void deleteUser() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Выберите пользователя для удаления.",
-                    "Ошибка", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Выберите пользователя.");
             return;
         }
 
         int userId = (int) tableModel.getValueAt(selectedRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Вы уверены, что хотите удалить пользователя?",
-                "Подтверждение удаления", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "Удалить пользователя?", "Подтверждение",
+                JOptionPane.YES_NO_OPTION);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            DBManager dbManager = new DBManager();
-            dbManager.deleteUserById(userId);
-            loadUsersFromDatabase();
+            Response response = UserSender.deleteUser(userId);
+            if (response.isSuccess()) {
+                JOptionPane.showMessageDialog(this, "Пользователь удален.");
+                loadUsersFromServer();
+            } else {
+                JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
+            }
         }
     }
 
@@ -488,24 +519,32 @@ class UserManagement extends JFrame {
         sorter.setRowFilter(combinedFilter);
     }
 
-    private void changeBlockStatus(int block) {
+    private void changeBlockStatus(int newBlockValue) {
         int selectedRow = userTable.getSelectedRow();
-        if (selectedRow != -1) {
-            String login = (String) tableModel.getValueAt(selectedRow, 1);
-            String role = (String) tableModel.getValueAt(selectedRow, 2);
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите пользователя.");
+            return;
+        }
 
-            if (!role.equals("CLIENT") && !role.equals("MANAGER")) {
-                JOptionPane.showMessageDialog(this, "Можно блокировать только пользователей с ролями CLIENT и MANAGER.");
-                return;
-            }
+        String login = (String) tableModel.getValueAt(selectedRow, 1);
+        String currentBlock = (String) tableModel.getValueAt(selectedRow, 3);
+        boolean isBlocked = currentBlock.equals("Да");
 
-            DBManager db = new DBManager();
-            db.setUserBlocked(login, block);
-            loadUsersFromDatabase();
+        // Проверка: не блокируем уже заблокированного и не разблокируем уже разблокированного
+        if ((newBlockValue == 1 && isBlocked) || (newBlockValue == 0 && !isBlocked)) {
+            JOptionPane.showMessageDialog(this, "Статус пользователя уже установлен.");
+            return;
+        }
+
+        Response response = UserSender.setUserBlocked(login, newBlockValue);
+        if (response.isSuccess()) {
+            JOptionPane.showMessageDialog(this, "Статус блокировки обновлён.");
+            loadUsersFromServer();
         } else {
-            JOptionPane.showMessageDialog(this, "Пожалуйста, выберите пользователя.");
+            JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
         }
     }
+
 }
 
 class SalesMonitoringWindow extends JFrame {
@@ -522,44 +561,45 @@ class SalesMonitoringWindow extends JFrame {
         setLayout(new BorderLayout());
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        DBManager dbManager = new DBManager();
         // Автомобили
         JPanel carsPanel = createTablePanel(
                 new String[]{"ID", "VIN", "Бренд", "Модель", "Год", "Цена", "Гарантия (лет)", "В наличии", "Количество"},
-                "Автомобили"
+                "CARS"
         );
         carsTable = (JTable) carsPanel.getClientProperty("table");
-        dbManager.loadTableData(carsTable, "SELECT id, vin, brand, model, year, price, warranty_years, available, quantity FROM cars");
+        loadCars();
         tabbedPane.add("Автомобили", carsPanel);
 
-// Клиенты
+        // Клиенты
         JPanel clientsPanel = createTablePanel(
                 new String[]{"ID", "ФИО", "Телефон", "Email", "Адрес"},
-                "Клиенты"
+                "CLIENTS"
         );
         clientsTable = (JTable) clientsPanel.getClientProperty("table");
-        dbManager.loadTableData(clientsTable, "SELECT id, full_name, phone, email, address FROM clients");
+        loadClients();
         tabbedPane.add("Клиенты", clientsPanel);
 
-// Продажи
+        // Продажи
         JPanel salesPanel = createTablePanel(
                 new String[]{"ID", "ID Авто", "ID Клиента", "Дата продажи", "Цена продажи"},
-                "Продажи"
+                "SALES"
         );
         salesTable = (JTable) salesPanel.getClientProperty("table");
-        dbManager.loadTableData(salesTable, "SELECT id, car_id, client_id, sale_date, sale_price FROM sales");
+        loadSales();
         tabbedPane.add("Продажи", salesPanel);
 
-// Сервисное обслуживание
+        // Сервис
         JPanel servicePanel = createTablePanel(
                 new String[]{"ID", "ID Авто", "ID Клиента", "Дата сервиса", "Описание", "По гарантии"},
-                "Сервисное обслуживание"
+                "SERVICE"
         );
         serviceRecordsTable = (JTable) servicePanel.getClientProperty("table");
-        dbManager.loadTableData(serviceRecordsTable, "SELECT id, car_id, client_id, service_date, description, under_warranty FROM service_records");
+        loadServiceRecords();
         tabbedPane.add("Сервисное обслуживание", servicePanel);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+
     }
 
     private JPanel createTablePanel(String[] columnNames, String entityName) {
@@ -571,6 +611,26 @@ class SalesMonitoringWindow extends JFrame {
         JScrollPane scrollPane = new JScrollPane(table);
         panel.add(scrollPane, BorderLayout.CENTER);
 
+        JTextField searchField = new JTextField(20);
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        searchPanel.add(new JLabel("Поиск:"));
+        searchPanel.add(searchField);
+        panel.add(searchPanel, BorderLayout.NORTH); // добавим панель поиска сверху
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void search() {
+                String text = searchField.getText();
+                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) carsTable.getModel());
+                carsTable.setRowSorter(sorter);
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text))); // экранируем спецсимволы
+            }
+
+            public void insertUpdate(DocumentEvent e) { search(); }
+            public void removeUpdate(DocumentEvent e) { search(); }
+            public void changedUpdate(DocumentEvent e) { search(); }
+        });
+
+
         // Панель кнопок
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton addButton = new JButton("Добавить");
@@ -578,11 +638,10 @@ class SalesMonitoringWindow extends JFrame {
         JButton deleteButton = new JButton("Удалить");
         JButton exitButton = new JButton("Назад");
 
-        // Слушатели кнопок
-        addButton.addActionListener(e -> addRow(model, entityName));
-        editButton.addActionListener(e -> editRow(model, table, entityName));
-        deleteButton.addActionListener(e -> deleteRow(model, table));
-        exitButton.addActionListener(e -> dispose());
+        addButton.addActionListener(e -> handleAdd(entityName, table));
+        editButton.addActionListener(e -> handleEdit(entityName, table));
+        deleteButton.addActionListener(e -> handleDelete(entityName, table));
+
 
         buttonsPanel.add(addButton);
         buttonsPanel.add(editButton);
@@ -591,66 +650,222 @@ class SalesMonitoringWindow extends JFrame {
 
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
-        // Запоминаем таблицу
+// Запоминаем таблицу
         panel.putClientProperty("table", table);
 
         return panel;
     }
 
-    private void addRow(DefaultTableModel model, String entityName) {
-        int columns = model.getColumnCount();
-        String[] inputData = new String[columns];
+    private void handleAdd(String entity, JTable table) {
+        switch (entity) {
+            case "CARS":
+                String vin = JOptionPane.showInputDialog(this, "Введите VIN:");
+                String brand = JOptionPane.showInputDialog(this, "Введите бренд:");
+                String modelCar = JOptionPane.showInputDialog(this, "Введите модель:");
+                int year = Integer.parseInt(JOptionPane.showInputDialog(this, "Введите год:"));
+                double price = Double.parseDouble(JOptionPane.showInputDialog(this, "Введите цену:"));
+                int warrantyYears = Integer.parseInt(JOptionPane.showInputDialog(this, "Гарантия (лет):"));
+                boolean isAvailable = JOptionPane.showConfirmDialog(this, "В наличии?", "Выберите", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+                int quantity = Integer.parseInt(JOptionPane.showInputDialog(this, "Количество:"));
 
-        for (int i = 0; i < columns; i++) {
-            inputData[i] = JOptionPane.showInputDialog(this, "Введите " + model.getColumnName(i) + ":");
-            if (inputData[i] == null) {
-                // Отмена ввода
-                return;
-            }
+                Car car = new Car(vin, brand, modelCar, year, price, warrantyYears, isAvailable, quantity);
+                Response carResp = UserSender.insertCar(car);
+                showMessage(carResp, "Автомобиль добавлен");
+                loadCars();
+                break;
+
+            case "CLIENTS":
+                String name = JOptionPane.showInputDialog(this, "ФИО:");
+                String phone = JOptionPane.showInputDialog(this, "Телефон:");
+                String email = JOptionPane.showInputDialog(this, "Email:");
+                String address = JOptionPane.showInputDialog(this, "Адрес:");
+
+                Client client = new Client(name, phone, email, address);
+                Response clientResp = UserSender.insertClient(client);
+                showMessage(clientResp, "Клиент добавлен");
+                loadClients();
+                break;
+
+            case "SALES":
+                int carId = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Авто:"));
+                int clientId = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Клиента:"));
+                LocalDate saleDate = LocalDate.parse(JOptionPane.showInputDialog(this, "Дата продажи (YYYY-MM-DD):"));
+                double salePrice = Double.parseDouble(JOptionPane.showInputDialog(this, "Цена продажи:"));
+
+                Sale sale = new Sale(carId, clientId, saleDate, salePrice);
+                Response saleResp = UserSender.insertSale(sale);
+                showMessage(saleResp, "Продажа добавлена");
+                loadSales();
+                break;
+
+            case "SERVICE":
+                int carIdS = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Авто:"));
+                int clientIdS = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Клиента:"));
+                LocalDate serviceDate = LocalDate.parse(JOptionPane.showInputDialog(this, "Дата сервиса (YYYY-MM-DD):"));
+                String description = JOptionPane.showInputDialog(this, "Описание:");
+                boolean underWarranty = JOptionPane.showConfirmDialog(this, "По гарантии?", "Выберите", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+
+                ServiceRecord record = new ServiceRecord(carIdS, clientIdS, serviceDate, description, underWarranty);
+                Response servResp = UserSender.insertServiceRecord(record);
+                showMessage(servResp, "Сервисная запись добавлена");
+                loadServiceRecords();
+                break;
         }
-        model.addRow(inputData);
     }
 
-    private void editRow(DefaultTableModel model, JTable table, String entityName) {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Выберите строку для редактирования", "Ошибка", JOptionPane.ERROR_MESSAGE);
+    private void handleEdit(String entity, JTable table) {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите строку для редактирования");
             return;
         }
 
-        for (int i = 0; i < model.getColumnCount(); i++) {
-            String currentValue = (String) model.getValueAt(selectedRow, i);
-            String newValue = JOptionPane.showInputDialog(this, "Измените " + model.getColumnName(i) + ":", currentValue);
-            if (newValue != null) {
-                model.setValueAt(newValue, selectedRow, i);
-            }
+        int id = (int) table.getValueAt(row, 0);
+
+        switch (entity) {
+            case "CARS":
+                String vin = JOptionPane.showInputDialog(this, "VIN:", table.getValueAt(row, 1));
+                String brand = JOptionPane.showInputDialog(this, "Бренд:", table.getValueAt(row, 2));
+                String modelCar = JOptionPane.showInputDialog(this, "Модель:", table.getValueAt(row, 3));
+                int year = Integer.parseInt(JOptionPane.showInputDialog(this, "Год:", table.getValueAt(row, 4)));
+                double price = Double.parseDouble(JOptionPane.showInputDialog(this, "Цена:", table.getValueAt(row, 5)));
+                int warranty = Integer.parseInt(JOptionPane.showInputDialog(this, "Гарантия:", table.getValueAt(row, 6)));
+                boolean available = JOptionPane.showConfirmDialog(this, "В наличии?", "Выберите", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+                int qty = Integer.parseInt(JOptionPane.showInputDialog(this, "Количество:", table.getValueAt(row, 8)));
+
+                Car car = new Car(vin, brand, modelCar, year, price, warranty, available, qty);
+                car.setId(id);
+                Response carResp = UserSender.updateCar(car);
+                showMessage(carResp, "Автомобиль обновлён");
+                loadCars();
+                break;
+
+            case "CLIENTS":
+                String name = JOptionPane.showInputDialog(this, "ФИО:", table.getValueAt(row, 1));
+                String phone = JOptionPane.showInputDialog(this, "Телефон:", table.getValueAt(row, 2));
+                String email = JOptionPane.showInputDialog(this, "Email:", table.getValueAt(row, 3));
+                String addr = JOptionPane.showInputDialog(this, "Адрес:", table.getValueAt(row, 4));
+
+                Client client = new Client(name, phone, email, addr);
+                client.setId(id);
+                Response cliResp = UserSender.updateClient(client);
+                showMessage(cliResp, "Клиент обновлён");
+                loadClients();
+                break;
+
+            case "SALES":
+                int carId = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Авто:", table.getValueAt(row, 1)));
+                int clientId = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Клиента:", table.getValueAt(row, 2)));
+                LocalDate date = LocalDate.parse(JOptionPane.showInputDialog(this, "Дата:", table.getValueAt(row, 3)));
+                double priceS = Double.parseDouble(JOptionPane.showInputDialog(this, "Цена:", table.getValueAt(row, 4)));
+
+                Sale sale = new Sale(carId, clientId, date, priceS);
+                sale.setId(id);
+                Response saleResp = UserSender.updateSale(sale);
+                showMessage(saleResp, "Продажа обновлена");
+                loadSales();
+                break;
+
+            case "SERVICE":
+                int carIdS = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Авто:", table.getValueAt(row, 1)));
+                int clientIdS = Integer.parseInt(JOptionPane.showInputDialog(this, "ID Клиента:", table.getValueAt(row, 2)));
+                LocalDate dateS = LocalDate.parse(JOptionPane.showInputDialog(this, "Дата сервиса:", table.getValueAt(row, 3)));
+                String desc = JOptionPane.showInputDialog(this, "Описание:", table.getValueAt(row, 4));
+                boolean warrantyS = JOptionPane.showConfirmDialog(this, "По гарантии?", "Выберите", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+
+                ServiceRecord record = new ServiceRecord(carIdS, clientIdS, dateS, desc, warrantyS);
+                record.setId(id);
+                Response recResp = UserSender.updateServiceRecord(record);
+                showMessage(recResp, "Запись обновлена");
+                loadServiceRecords();
+                break;
         }
     }
 
-    private void deleteRow(DefaultTableModel model, JTable table) {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Выберите строку для удаления", "Ошибка", JOptionPane.ERROR_MESSAGE);
+    private void handleDelete(String entity, JTable table) {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите строку для удаления");
             return;
         }
-        int confirm = JOptionPane.showConfirmDialog(this, "Удалить выбранную строку?", "Подтверждение", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            model.removeRow(selectedRow);
+
+        int id = (int) table.getValueAt(row, 0);
+        int confirm = JOptionPane.showConfirmDialog(this, "Удалить запись?", "Подтверждение", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        Response resp = null;
+        switch (entity) {
+            case "CARS": resp = UserSender.deleteCar(id); loadCars(); break;
+            case "CLIENTS": resp = UserSender.deleteClient(id); loadClients(); break;
+            case "SALES": resp = UserSender.deleteSale(id); loadSales(); break;
+            case "SERVICE": resp = UserSender.deleteServiceRecord(id); loadServiceRecords(); break;
+        }
+        showMessage(resp, "Удаление выполнено");
+    }
+
+    private void showMessage(Response resp, String successMessage) {
+        if (resp.isSuccess()) {
+            JOptionPane.showMessageDialog(this, successMessage);
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка: " + resp.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    public void refreshSalesData() {
-        DBManager dbManager = new DBManager();
-        dbManager.loadTableData(salesTable, "SELECT id, car_id, client_id, sale_date, sale_price FROM sales");
+
+    private void loadCars() {
+        List<Car> cars = UserSender.getAllCarsDetailed();
+        DefaultTableModel model = (DefaultTableModel) carsTable.getModel();
+        model.setRowCount(0);
+        for (Car car : cars) {
+            model.addRow(new Object[]{
+                    car.getId(), car.getVIN(), car.getBrand(), car.getModel(),
+                    car.getYear(), car.getPrice(), car.getWarrantyYears(),
+                    car.isAvailable() ? "Да" : "Нет", car.getQuantity()
+            });
+        }
+    }
+
+    private void loadClients() {
+        List<Client> clients = UserSender.getAllClients();
+        DefaultTableModel model = (DefaultTableModel) clientsTable.getModel();
+        model.setRowCount(0);
+        for (Client c : clients) {
+            model.addRow(new Object[]{
+                    c.getId(), c.getFull_name(), c.getPhone(), c.getEmail(), c.getAddress()
+            });
+        }
+    }
+
+    private void loadSales() {
+        List<Sale> sales = UserSender.getAllSales();
+        DefaultTableModel model = (DefaultTableModel) salesTable.getModel();
+        model.setRowCount(0);
+        for (Sale s : sales) {
+            model.addRow(new Object[]{
+                    s.getId(), s.getCar_id(), s.getClient_id(), s.getSale_date(), s.getSale_price()
+            });
+        }
+    }
+
+    private void loadServiceRecords() {
+        List<ServiceRecord> records = UserSender.getAllServiceRecords();
+        DefaultTableModel model = (DefaultTableModel) serviceRecordsTable.getModel();
+        model.setRowCount(0);
+        for (ServiceRecord r : records) {
+            model.addRow(new Object[]{
+                    r.getId(), r.getCar_id(), r.getClient_id(), r.getService_date(),
+                    r.getDescription(), r.is_under_warranty() ? "Да" : "Нет"
+            });
+        }
     }
 }
 
+
+
 class CarsWindow extends JFrame {
     private JTable carsTable;
-    private DBManager dbManager;
 
     public CarsWindow(List <Car> cars) {
-        dbManager = new DBManager();
 
         setTitle("Доступные автомобили");
         setSize(800, 600);
@@ -841,12 +1056,10 @@ class CreateOrderWindow extends JFrame {
 
 class MyOrdersWindow extends JFrame {
     private JTable ordersTable;
-    private DBManager dbManager;
     private DefaultTableModel model;
     private int clientId;
 
     public MyOrdersWindow(int clientId) {
-        dbManager = new DBManager();
         this.clientId = clientId;
         setTitle("Мои заказы");
         setSize(800, 600);
@@ -941,10 +1154,11 @@ class ManageOrdersWindow extends JFrame {
     private JTable ordersTable;
     private DBManager dbManager;
     private DefaultTableModel model;
+    private List<OrderInfo> currentOrders;
 
     private SalesMonitoringWindow monitoringWindow;
 
-    public ManageOrdersWindow(SalesMonitoringWindow monitoringWindow) {
+    public ManageOrdersWindow(List<OrderInfo> orders, SalesMonitoringWindow monitoringWindow) {
         this.monitoringWindow = monitoringWindow;
         dbManager = new DBManager();
 
@@ -985,35 +1199,20 @@ class ManageOrdersWindow extends JFrame {
     }
 
     private void loadOrdersData() {
-        String query = """
-                SELECT o.id, o.client_id, c.brand, c.model, c.year,
-                       o.total_price, o.payment_method, o.order_date, o.status
-                FROM orders_to_sales o
-                JOIN cars c ON o.car_id = c.id
-                ORDER BY o.order_date DESC
-                """;
-
-        model.setRowCount(0); // очищаем перед загрузкой
-
-        try (Connection conn = dbManager.getDbConnection();
-             PreparedStatement stmt = conn.prepareStatement(query);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                model.addRow(new Object[]{
-                        rs.getInt("id"),
-                        rs.getInt("client_id"),
-                        rs.getString("brand"),
-                        rs.getString("model"),
-                        rs.getInt("year"),
-                        rs.getDouble("total_price"),
-                        rs.getString("payment_method"),
-                        rs.getDate("order_date"),
-                        rs.getString("status")
-                });
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Ошибка загрузки заказов: " + e.getMessage());
+        model.setRowCount(0);
+        currentOrders = UserSender.getAllOrders();  // Загрузка с сервера
+        for (OrderInfo order : currentOrders) {
+            model.addRow(new Object[]{
+                    order.getId(),
+                    order.getClientId(),
+                    order.getBrand(),
+                    order.getModel(),
+                    order.getYear(),
+                    order.getTotalPrice(),
+                    order.getPaymentMethod(),
+                    order.getOrderDate(),
+                    order.getStatus()
+            });
         }
     }
 
@@ -1033,79 +1232,14 @@ class ManageOrdersWindow extends JFrame {
         }
 
         int orderId = (int) model.getValueAt(modelRow, 0);
-        int clientId = (int) model.getValueAt(modelRow, 1);
-        String brand = (String) model.getValueAt(modelRow, 2);
-        String modelName = (String) model.getValueAt(modelRow, 3);
-        double price = (double) model.getValueAt(modelRow, 5);
 
-        // Получим ID машины
-        int carId = dbManager.getCarIdByBrandAndModel(brand, modelName);
-
-
-        String checkAvailability = "SELECT available FROM cars WHERE id = ?";
-        try (Connection conn = dbManager.getDbConnection();
-        PreparedStatement checkStmt = conn.prepareStatement(checkAvailability)) {
-            checkStmt.setInt(1, carId);
-            ResultSet rs = checkStmt.executeQuery();
-            if (rs.next() && rs.getInt("available") == 0) {
-                JOptionPane.showMessageDialog(this, "Автомобиль \"" + brand + " " + modelName + "\" больше не доступен.");
-                return;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        String updateSql = "UPDATE orders_to_sales SET status = ? WHERE id = ?";
-        try (Connection conn = dbManager.getDbConnection();
-             PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-
-            updateStmt.setString(1, newStatus);
-            updateStmt.setInt(2, orderId);
-            updateStmt.executeUpdate();
-
-
-
-            // Если заказ подтвержден — вставим запись в таблицу sales
-            if ("Подтверждён".equals(newStatus)) {
-                String insertSale = "INSERT INTO sales (car_id, client_id, sale_date, sale_price) VALUES (?, ?, CURRENT_DATE, ?)";
-                try (PreparedStatement insertStmt = conn.prepareStatement(insertSale)) {
-                    insertStmt.setInt(1, carId);
-                    insertStmt.setInt(2, clientId);
-                    insertStmt.setDouble(3, price);
-                    insertStmt.executeUpdate();
-                }
-
-                // Уменьшим количество машин на складе
-                String updateCarQty = "UPDATE cars SET quantity = quantity - 1 WHERE id = ?";
-                try (PreparedStatement carStmt = conn.prepareStatement(updateCarQty)) {
-                    carStmt.setInt(1, carId);
-                    carStmt.executeUpdate();
-                }
-
-                String checkQtySql = "SELECT quantity FROM cars WHERE id = ?";
-                try (PreparedStatement checkStmt = conn.prepareStatement(checkQtySql)) {
-                    checkStmt.setInt(1, carId);
-                    ResultSet rs = checkStmt.executeQuery();
-                    if (rs.next() && rs.getInt("quantity") == 0) {
-                        String updateAvailable = "UPDATE cars SET available = 0 WHERE id = ?";
-                        try (PreparedStatement availableStmt = conn.prepareStatement(updateAvailable)) {
-                            availableStmt.setInt(1, carId);
-                            availableStmt.executeUpdate();
-                        }
-                    }
-                }
-
-                // Обновим мониторинг
-                if (monitoringWindow != null) {
-                    monitoringWindow.refreshSalesData();
-                }
-            }
-
-            JOptionPane.showMessageDialog(this, "Статус заказа обновлён на: " + newStatus);
+        Response response = UserSender.updateOrderStatus(orderId, newStatus);
+        System.out.println(response);
+        if (response.isSuccess()) {
+            JOptionPane.showMessageDialog(this, response.getMessage());
             loadOrdersData();
-
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Ошибка обновления статуса: " + e.getMessage());
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
         }
     }
 
@@ -1116,14 +1250,13 @@ class ChangePasswordDialog extends JDialog {
     private JPasswordField oldPasswordField;
     private JPasswordField newPasswordField;
     private JPasswordField confirmPasswordField;
-    private final DBManager dbManager;
     private final int userId; // ID текущего пользователя
     private boolean passwordChanged;
 
-    public ChangePasswordDialog(JFrame parent, int userId, DBManager dbManager) {
+    public ChangePasswordDialog(JFrame parent, int userId) {
         super(parent, "Сменить пароль", true);
         this.userId = userId;
-        this.dbManager = dbManager;
+
 
         setSize(350, 250);
         setLocationRelativeTo(parent);
@@ -1166,13 +1299,15 @@ class ChangePasswordDialog extends JDialog {
             return;
         }
 
-        boolean success = dbManager.updatePassword(userId, oldPass, newPass);
-        if (success) {
+        // Отправляем запрос на смену пароля
+        Response response = UserSender.changePassword(userId, oldPass, newPass);
+
+        if (response.isSuccess()) {
             passwordChanged = true;
             JOptionPane.showMessageDialog(this, "Пароль успешно изменён. Войдите заново.");
             dispose();
         } else {
-            JOptionPane.showMessageDialog(this, "Старый пароль неверен.");
+            JOptionPane.showMessageDialog(this, response.getMessage());
         }
     }
 
@@ -1183,12 +1318,10 @@ class ChangePasswordDialog extends JDialog {
 class MyPurchasesWindow extends JFrame {
     private JTable purchasesTable;
     private DefaultTableModel model;
-    private DBManager dbManager;
     private int clientId;
 
     public MyPurchasesWindow(int clientId) {
         this.clientId = clientId;
-        dbManager = new DBManager();
 
         setTitle("Мои покупки");
         setSize(900, 500);
@@ -1210,34 +1343,109 @@ class MyPurchasesWindow extends JFrame {
     }
 
     private void loadPurchases() {
-        String query = """
-            SELECT c.brand, c.model, c.year, o.total_price, o.payment_method, o.order_date
-            FROM orders_to_sales o
-            JOIN cars c ON o.car_id = c.id
-            WHERE o.client_id = ? AND o.status = 'Подтверждён'
-            ORDER BY o.order_date DESC
-        """;
+        List<PurchaseInfo> purchases = UserSender.getClientPurchases(clientId);
+        model.setRowCount(0);
 
-        try (Connection conn = dbManager.getDbConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, clientId);
-            ResultSet rs = stmt.executeQuery();
-
-            model.setRowCount(0); // очистить таблицу перед добавлением новых данных
-
-            while (rs.next()) {
-                model.addRow(new Object[] {
-                        rs.getString("brand"),
-                        rs.getString("model"),
-                        rs.getInt("year"),
-                        rs.getDouble("total_price"),
-                        rs.getString("payment_method"),
-                        rs.getDate("order_date")
-                });
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Ошибка загрузки покупок: " + e.getMessage());
+        for (PurchaseInfo p : purchases) {
+            model.addRow(new Object[]{
+                    p.getBrand(),
+                    p.getModel(),
+                    p.getYear(),
+                    p.getTotalPrice(),
+                    p.getPaymentMethod(),
+                    p.getOrderDate()
+            });
         }
     }
 }
+class CreateServiceRequestWindow extends JFrame {
+    private final int clientId;
+    private final JComboBox<Car> carComboBox; // Комбобокс для выбора автомобиля
+    private final JTextArea descriptionArea;
+
+    public CreateServiceRequestWindow(int clientId) {
+        this.clientId = clientId;
+
+        setTitle("Создание запроса на техобслуживание");
+        setSize(400, 300);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(10, 10));
+
+        // Панель выбора автомобиля
+        JPanel carPanel = new JPanel(new BorderLayout());
+        carPanel.add(new JLabel("Выберите автомобиль (опционально):"), BorderLayout.NORTH);
+
+        carComboBox = new JComboBox<>();
+        carPanel.add(carComboBox, BorderLayout.CENTER);
+
+        loadUserCars(); // Загружаем машины в таблицу и комбобокс
+
+        // Панель ввода описания
+        JPanel descriptionPanel = new JPanel(new BorderLayout());
+        descriptionPanel.add(new JLabel("Описание проблемы:"), BorderLayout.NORTH);
+        descriptionArea = new JTextArea(5, 30);
+        descriptionPanel.add(new JScrollPane(descriptionArea), BorderLayout.CENTER);
+
+        // Кнопка отправки
+        JButton submitButton = new JButton("Отправить заявку");
+        submitButton.addActionListener(e -> handleSubmit());
+
+        // Кнопка закрытия
+        JButton cancelButton = new JButton("Отмена");
+        cancelButton.addActionListener(e -> dispose());
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(submitButton);
+        buttonPanel.add(cancelButton);
+
+        add(carPanel, BorderLayout.NORTH);
+        add(descriptionPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private void loadUserCars() {
+        List<PurchaseInfo> purchases = UserSender.getClientSales(clientId);
+
+        DefaultComboBoxModel<Car> carComboBoxModel = new DefaultComboBoxModel<>(); // Модель для комбобокса
+
+        for (PurchaseInfo p : purchases) {
+            // Заполняем комбобокс
+            //System.out.println("PurchaseInfo ID: " + p.getId());
+            Car car = new Car(p.getId(), p.getBrand(), p.getModel(), p.getYear());
+            carComboBoxModel.addElement(car);
+            System.out.println(p.getId() + " " + p.getBrand() + " " + p.getModel() + " " + p.getYear());
+        }
+        // Устанавливаем модель для комбобокса
+        carComboBox.setModel(carComboBoxModel);
+    }
+
+    private void handleSubmit() {
+        String description = descriptionArea.getText().trim();
+        if (description.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Пожалуйста, введите описание проблемы.");
+            return;
+        }
+
+        Car selectedCar = (Car) carComboBox.getSelectedItem();
+        Integer carId = selectedCar != null ? selectedCar.getId() : null;
+
+        ServiceRequest request = new ServiceRequest(
+                0,
+                clientId,
+                carId,
+                description,
+                LocalDateTime.now(),
+                "В ожидании"
+        );
+        System.out.println("Car ID: " + request.getCarId());
+        Response response = UserSender.sendServiceRequest(request);
+        if ("success".equals(response.getStatus())) {
+            JOptionPane.showMessageDialog(this, "Заявка отправлена успешно.");
+            dispose();
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка при отправке заявки: " + response.getMessage());
+        }
+    }
+}
+

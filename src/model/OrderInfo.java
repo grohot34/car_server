@@ -6,6 +6,8 @@ import java.time.LocalDate;
 public class OrderInfo implements Serializable {
     private static final long serialVersionUID = 1L;
     private int id;
+    int clientId;
+    int carId;
     private String brand;
     private String model;
     private int year;
@@ -27,8 +29,24 @@ public class OrderInfo implements Serializable {
     public OrderInfo() {
         super();
     }
+
+    public OrderInfo(int id, int clientId, String brand, String model, int year, double totalPrice, String paymentMethod, LocalDate orderDate, String status) {
+        this.id = id;
+        this.clientId = clientId;
+        this.brand = brand;
+        this.model = model;
+        this.year = year;
+        this.totalPrice = totalPrice;
+        this.paymentMethod = paymentMethod;
+        this.orderDate = orderDate;
+        this.status = status;
+    }
+
     public int getId() {
         return id;
+    }
+    public int getClientId() {
+        return clientId;
     }
 
     public String getBrand() {
@@ -51,5 +69,8 @@ public class OrderInfo implements Serializable {
     }
     public String getStatus() {
         return status;
+    }
+    public int getCarId() {
+        return carId;
     }
 }

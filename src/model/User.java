@@ -34,7 +34,8 @@ public class User implements Serializable {
         return role;
     }
 
-    public int isBlocked() {
-        return isBlocked;
+
+    public boolean isBlocked() {
+        return isBlocked == 1;
     }
 }
