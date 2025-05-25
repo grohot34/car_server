@@ -1,20 +1,16 @@
-import Request_Response.Request;
 import Request_Response.Response;
 import model.*;
-import util.BackupManager;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -31,13 +27,12 @@ public class MainWindow extends JFrame {
 
 // Окно для клиента
 class ClientWindow extends MainWindow {
-    private DBManager dbManager;
+
     private User currentUser;
 
     public ClientWindow(User currentUser) {
         super("Окно клиента");
         this.currentUser = currentUser;
-        dbManager = new DBManager();
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
@@ -46,27 +41,26 @@ class ClientWindow extends MainWindow {
 
         JButton viewCarsButton = new JButton("Просмотреть автомобили");
         JButton createOrderButton = new JButton("Создать заказ на покупку автомобиля");
+        JButton clientProfile = new JButton("Мой профиль");
         JButton viewOrderButton = new JButton("Мои заказы");
         JButton viewPurchasesButton = new JButton("Мои покупки");
         JButton createServiceRequestButton = new JButton("Создать запрос на техобслуживание");
+        JButton viewServiceRequestButton = new JButton("Мои заявки на техобслуживание");
+        JButton historyService = new JButton("История техобслуживания");
+        JButton createReview = new JButton("Оставить отзыв");
         JButton changePasswordButton = new JButton("Сменить пароль");
-
+        JButton exitButton = new JButton("Выход");
 
         viewCarsButton.addActionListener(e -> {
             try {
-                // Попробуем получить список автомобилей от сервера
-                List<Car> cars = UserSender.getAllCars();
-                System.out.println(cars);
-                // Если запрос прошел успешно, откроем окно с автомобилями
+                List<Car> cars = UserSender.getAllCars(currentUser);
                 if (!cars.isEmpty()) {
                     CarsWindow carsWindow = new CarsWindow(cars);
                     carsWindow.setVisible(true);
                 } else {
-                    // Если список пустой, покажем сообщение
                     JOptionPane.showMessageDialog(this, "Нет доступных автомобилей для просмотра.");
                 }
             } catch (Exception ex) {
-                // Обработка исключений
                 JOptionPane.showMessageDialog(this, "Ошибка при получении данных о автомобилях: " + ex.getMessage());
                 ex.printStackTrace();
             }
@@ -74,13 +68,13 @@ class ClientWindow extends MainWindow {
 
         createOrderButton.addActionListener(e -> {
             try {
-                List<Car> cars = UserSender.getAllCars();
+                List<Car> cars = UserSender.getAllCars(currentUser);
                 if (cars.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Нет доступных автомобилей.");
                     return;
                 }
 
-                CreateOrderWindow orderWindow = new CreateOrderWindow(currentUser.getId(), cars);
+                CreateOrderWindow orderWindow = new CreateOrderWindow(currentUser.getId(), cars, currentUser);
                 orderWindow.setVisible(true);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, "Ошибка при загрузке автомобилей: " + ex.getMessage());
@@ -88,22 +82,28 @@ class ClientWindow extends MainWindow {
             }
         });
 
+        clientProfile.addActionListener(e -> {
+            Client client = currentUser.getClientData();
+            if (client == null) {
+                JOptionPane.showMessageDialog(this, "Информация о клиенте недоступна.");
+                return;
+            }
+
+            ClientProfileWindow profileWindow = new ClientProfileWindow(client);
+            profileWindow.setVisible(true);
+        });
+
         viewOrderButton.addActionListener(e -> {
             try {
-                // Попробуем получить список заказов для текущего пользователя с сервера
                 List<OrderInfo> orders = UserSender.getOrdersForClient(currentUser.getId());
 
-                // Если запрос прошел успешно и есть заказы
                 if (orders != null && !orders.isEmpty()) {
-                    // Создадим окно для отображения заказов
-                    MyOrdersWindow ordersWindow = new MyOrdersWindow(currentUser.getId()); // передаем список заказов
+                    MyOrdersWindow ordersWindow = new MyOrdersWindow(currentUser.getId());
                     ordersWindow.setVisible(true);
                 } else {
-                    // Если заказов нет, выводим сообщение
                     JOptionPane.showMessageDialog(this, "У вас нет заказов.");
                 }
             } catch (Exception ex) {
-                // Обработка исключений, если что-то пошло не так
                 JOptionPane.showMessageDialog(this, "Ошибка при получении данных о заказах: " + ex.getMessage());
                 ex.printStackTrace();
             }
@@ -114,9 +114,46 @@ class ClientWindow extends MainWindow {
             purchasesWindow.setVisible(true);
         });
 
+        createReview.addActionListener(e -> {
+           ReviewWindow reviewWindow = new ReviewWindow(currentUser.getId());
+           reviewWindow.setVisible(true);
+        });
+
         createServiceRequestButton.addActionListener(e -> {
             CreateServiceRequestWindow createServiceRequestWindow = new CreateServiceRequestWindow(currentUser.getId());
             createServiceRequestWindow.setVisible(true);
+        });
+
+        viewServiceRequestButton.addActionListener(e -> {
+            try {
+                List<ServiceRequest> requests = UserSender.getServiceRequestsForClient(currentUser.getId());
+
+                if (requests != null && !requests.isEmpty()) {
+                    MyRequestServiceWindow requestWindow = new MyRequestServiceWindow(currentUser.getId());
+                    requestWindow.setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "У вас нет заявок на обслуживание.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Ошибка при получении заявок: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        historyService.addActionListener(e -> {
+            try {
+                List<ServiceRecord> serviceRecords = UserSender.getServiceHistoryForClient(currentUser.getId());
+
+                if (serviceRecords != null && !serviceRecords.isEmpty()) {
+                    MyServiceHistoryWindow historyWindow = new MyServiceHistoryWindow(currentUser.getId());
+                    historyWindow.setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "История сервисного обслуживания отсутствует.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Ошибка при получении истории обслуживания: " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
 
         changePasswordButton.addActionListener(e -> {
@@ -125,11 +162,10 @@ class ClientWindow extends MainWindow {
 
             if (dialog.isPasswordChanged()) {
                 dispose();
-                SwingUtilities.invokeLater(() -> new LoginWindow(dbManager).setVisible(true));
+                SwingUtilities.invokeLater(() -> new LoginWindow().setVisible(true));
             }
         });
 
-        JButton exitButton = new JButton("Выход");
         exitButton.addActionListener(e -> dispose());
 
         gbc.gridx = 0;
@@ -140,13 +176,25 @@ class ClientWindow extends MainWindow {
         add(createOrderButton, gbc);
 
         gbc.gridy++;
+        add(clientProfile, gbc);
+
+        gbc.gridy++;
         add(viewOrderButton, gbc);
 
         gbc.gridy++;
         add(viewPurchasesButton, gbc);
 
         gbc.gridy++;
+        add(createReview, gbc);
+
+        gbc.gridy++;
         add(createServiceRequestButton, gbc);
+
+        gbc.gridy++;
+        add(viewServiceRequestButton, gbc);
+
+        gbc.gridy++;
+        add(historyService, gbc);
 
         gbc.gridy++;
         add(changePasswordButton, gbc);
@@ -163,7 +211,7 @@ class ManagerWindow extends MainWindow {
     public ManagerWindow(User currentUser) {
         super("Окно менеджера");
         this.currentUser = currentUser;
-        this.monitoringWindow = new SalesMonitoringWindow();
+        this.monitoringWindow = new SalesMonitoringWindow(currentUser);
         this.dbManager = new DBManager();
 
         setLayout(new GridBagLayout());
@@ -176,12 +224,12 @@ class ManagerWindow extends MainWindow {
             monitoringWindow.setVisible(true);
         });
 
-        JButton processOrdersButton = new JButton("Заказы");
+        JButton processOrdersButton = new JButton("Заказы на покупку авто");
         processOrdersButton.addActionListener(e -> {
             try {
                 List<OrderInfo> orders = UserSender.getAllOrders();
                 if (!orders.isEmpty()) {
-                    ManageOrdersWindow manageOrdersWindow = new ManageOrdersWindow(orders, monitoringWindow);
+                    ManageOrdersCarsWindow manageOrdersWindow = new ManageOrdersCarsWindow(orders, monitoringWindow);
                     manageOrdersWindow.setVisible(true);
                 } else {
                     JOptionPane.showMessageDialog(this, "Нет заказов для отображения.");
@@ -192,15 +240,46 @@ class ManagerWindow extends MainWindow {
             }
         });
 
+        JButton serviceRequests = new JButton("Заявки на техобслуживание");
+        serviceRequests.addActionListener(e -> {
+            try {
+                Response response = UserSender.getAllServiceRequests();
+                if (response.isSuccess()) {
+                    ServiceRequestWindow serviceRequestWindow = new ServiceRequestWindow();
+                    serviceRequestWindow.setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Нет заявок для отображения.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Ошибка при получении заявок: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        JButton clientsReviews = new JButton("Отзывы клиентов");
+        clientsReviews.addActionListener(e -> {
+            try {
+                Response response = UserSender.getAllReviews();
+                if (!response.isSuccess()) {
+                    JOptionPane.showMessageDialog(this, "Ошибка при загрузке отзывов: " + response.getMessage());
+                } else {
+                    List<Review> reviews = (List<Review>) response.getData();
+                    ReviewsManagerWindow reviewsManagerWindow = new ReviewsManagerWindow(reviews);
+                    reviewsManagerWindow.setVisible(true);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Ошибка при получении отзывов: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
 
         JButton changePassword = new JButton("Сменить пароль");
         changePassword.addActionListener(e -> {
             ChangePasswordDialog dialog = new ChangePasswordDialog(this, currentUser.getId());
             dialog.setVisible(true);
-
             if (dialog.isPasswordChanged()) {
                 dispose();
-                SwingUtilities.invokeLater(() -> new LoginWindow(dbManager).setVisible(true));
+                SwingUtilities.invokeLater(() -> new LoginWindow().setVisible(true));
             }
         });
 
@@ -213,6 +292,12 @@ class ManagerWindow extends MainWindow {
 
         gbc.gridy++;
         add(processOrdersButton, gbc);
+
+        gbc.gridy++;
+        add(serviceRequests, gbc);
+
+        gbc.gridy++;
+        add(clientsReviews, gbc);
 
         gbc.gridy++;
         add(changePassword, gbc);
@@ -277,6 +362,18 @@ class AdminWindow extends MainWindow {
         JButton downloadBackupButton = new JButton("Скачать резервную копию");
         downloadBackupButton.addActionListener(e -> UserSender.downloadBackup(AdminWindow.this));
 
+        JButton viewLogsButton = new JButton("Просмотр логов");
+        viewLogsButton.addActionListener(e -> {
+            Response response = UserSender.getLogs();
+            if (response.isSuccess()) {
+                java.util.List<LogEntry> logs = (java.util.List<LogEntry>) response.getData();
+                LogsWindow logsWindow = new LogsWindow(logs);
+                logsWindow.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(AdminWindow.this, "Не удалось загрузить логи: " + response.getMessage(),
+                        "Ошибка", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
 
         JButton exitButton = new JButton("Выход");
@@ -293,6 +390,9 @@ class AdminWindow extends MainWindow {
         add(downloadBackupButton, gbc);
 
         gbc.gridy++;
+        add(viewLogsButton, gbc);
+
+        gbc.gridy++;
         add(exitButton, gbc);
     }
 }
@@ -303,6 +403,7 @@ class UserManagement extends JFrame {
     private TableRowSorter<DefaultTableModel> sorter;
     private JTextField searchField;
     private JComboBox<String> roleFilterBox;
+    private User currentUser;
 
     public UserManagement() {
         setTitle("Управление пользователями");
@@ -314,7 +415,6 @@ class UserManagement extends JFrame {
 
     private void initUserManagementComponents() {
 
-        // Модель таблицы с колонками
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("Поиск по логину:"));
         searchField = new JTextField(15);
@@ -325,7 +425,6 @@ class UserManagement extends JFrame {
         roleFilterBox = new JComboBox<>(roles);
         topPanel.add(roleFilterBox);
 
-        // Таблица
         String[] columnNames = {"ID", "Логин", "Роль", "Блокировка"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -338,7 +437,6 @@ class UserManagement extends JFrame {
         userTable.setRowSorter(sorter);
         JScrollPane scrollPane = new JScrollPane(userTable);
 
-        // Кнопки действий
         JButton addButton = new JButton("Добавить");
         JButton changeRoleButton = new JButton("Изменить роль");
         JButton deleteButton = new JButton("Удалить");
@@ -364,7 +462,6 @@ class UserManagement extends JFrame {
         buttonPanel.add(refreshButton);
         buttonPanel.add(exitButton);
 
-        // Основная компоновка
         JPanel mainPanel = new JPanel(new BorderLayout(5, 5));
         mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
@@ -375,7 +472,6 @@ class UserManagement extends JFrame {
         revalidate();
         repaint();
 
-        // Слушатели для фильтрации
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
                 filter();
@@ -391,13 +487,12 @@ class UserManagement extends JFrame {
         });
         roleFilterBox.addActionListener(e -> filter());
 
-        // Первичная загрузка данных
         loadUsersFromServer();
     }
 
     private void loadUsersFromServer() {
         List<User> users = UserSender.getAllUsers();
-        tableModel.setRowCount(0); // очистка
+        tableModel.setRowCount(0);
         for (User user : users) {
             tableModel.addRow(new Object[]{
                     user.getId(),
@@ -408,11 +503,10 @@ class UserManagement extends JFrame {
         }
     }
 
-
     private void showAddUserDialog() {
         JTextField loginField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
-        String[] roles = {"client", "manager", "admin"};
+        String[] roles = {"CLIENT", "MANAGER", "ADMIN"};
         JComboBox<String> roleBox = new JComboBox<>(roles);
 
         JPanel panel = new JPanel(new GridLayout(3, 2));
@@ -552,8 +646,10 @@ class SalesMonitoringWindow extends JFrame {
     private JTable clientsTable;
     private JTable salesTable;
     private JTable serviceRecordsTable;
+    private User currentUser;
 
-    public SalesMonitoringWindow() {
+    public SalesMonitoringWindow(User currentUser) {
+        this.currentUser = currentUser;
         setTitle("Мониторинг продаж и сервисного обслуживания");
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -561,7 +657,6 @@ class SalesMonitoringWindow extends JFrame {
         setLayout(new BorderLayout());
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        // Автомобили
         JPanel carsPanel = createTablePanel(
                 new String[]{"ID", "VIN", "Бренд", "Модель", "Год", "Цена", "Гарантия (лет)", "В наличии", "Количество"},
                 "CARS"
@@ -570,7 +665,6 @@ class SalesMonitoringWindow extends JFrame {
         loadCars();
         tabbedPane.add("Автомобили", carsPanel);
 
-        // Клиенты
         JPanel clientsPanel = createTablePanel(
                 new String[]{"ID", "ФИО", "Телефон", "Email", "Адрес"},
                 "CLIENTS"
@@ -579,16 +673,14 @@ class SalesMonitoringWindow extends JFrame {
         loadClients();
         tabbedPane.add("Клиенты", clientsPanel);
 
-        // Продажи
         JPanel salesPanel = createTablePanel(
-                new String[]{"ID", "ID Авто", "ID Клиента", "Дата продажи", "Цена продажи"},
+                new String[]{"ID", "ID Авто", "ID Клиента", "Дата продажи", "Цена продажи", "Срок гарантии"},
                 "SALES"
         );
         salesTable = (JTable) salesPanel.getClientProperty("table");
         loadSales();
         tabbedPane.add("Продажи", salesPanel);
 
-        // Сервис
         JPanel servicePanel = createTablePanel(
                 new String[]{"ID", "ID Авто", "ID Клиента", "Дата сервиса", "Описание", "По гарантии"},
                 "SERVICE"
@@ -620,9 +712,10 @@ class SalesMonitoringWindow extends JFrame {
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             private void search() {
                 String text = searchField.getText();
-                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) carsTable.getModel());
-                carsTable.setRowSorter(sorter);
-                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text))); // экранируем спецсимволы
+                DefaultTableModel model = (DefaultTableModel) table.getModel();
+                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+                table.setRowSorter(sorter);
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text)));
             }
 
             public void insertUpdate(DocumentEvent e) { search(); }
@@ -630,8 +723,6 @@ class SalesMonitoringWindow extends JFrame {
             public void changedUpdate(DocumentEvent e) { search(); }
         });
 
-
-        // Панель кнопок
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton addButton = new JButton("Добавить");
         JButton editButton = new JButton("Редактировать");
@@ -641,7 +732,7 @@ class SalesMonitoringWindow extends JFrame {
         addButton.addActionListener(e -> handleAdd(entityName, table));
         editButton.addActionListener(e -> handleEdit(entityName, table));
         deleteButton.addActionListener(e -> handleDelete(entityName, table));
-
+        exitButton.addActionListener(e -> dispose());
 
         buttonsPanel.add(addButton);
         buttonsPanel.add(editButton);
@@ -650,7 +741,6 @@ class SalesMonitoringWindow extends JFrame {
 
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
-// Запоминаем таблицу
         panel.putClientProperty("table", table);
 
         return panel;
@@ -811,9 +901,8 @@ class SalesMonitoringWindow extends JFrame {
         }
     }
 
-
     private void loadCars() {
-        List<Car> cars = UserSender.getAllCarsDetailed();
+        List<Car> cars = UserSender.getAllCarsDetailed(currentUser);
         DefaultTableModel model = (DefaultTableModel) carsTable.getModel();
         model.setRowCount(0);
         for (Car car : cars) {
@@ -842,7 +931,7 @@ class SalesMonitoringWindow extends JFrame {
         model.setRowCount(0);
         for (Sale s : sales) {
             model.addRow(new Object[]{
-                    s.getId(), s.getCar_id(), s.getClient_id(), s.getSale_date(), s.getSale_price()
+                    s.getId(), s.getCar_id(), s.getClient_id(), s.getSale_date(), s.getSale_price(), s.getWarranty_end()
             });
         }
     }
@@ -859,8 +948,6 @@ class SalesMonitoringWindow extends JFrame {
         }
     }
 }
-
-
 
 class CarsWindow extends JFrame {
     private JTable carsTable;
@@ -932,10 +1019,12 @@ class CreateOrderWindow extends JFrame {
     private JTable carsTable;
     private int clientId;
     private List<Car> carList;
+    private User currentUser;
 
-    public CreateOrderWindow(int clientId, List<Car> carList) {
+    public CreateOrderWindow(int clientId, List<Car> carList, User currentUser) {
         this.clientId = clientId;
         this.carList = carList;
+        this.currentUser = currentUser;
 
         setTitle("Создание заказа на покупку автомобиля");
         setSize(900, 600);
@@ -1028,7 +1117,7 @@ class CreateOrderWindow extends JFrame {
         try {
             // Отправка заказа на сервер
             Order order = new Order(clientId, carId, LocalDate.now(), "Ожидает подтверждения", paymentMethod, price);
-            Response response = UserSender.sendOrder(order);
+            Response response = UserSender.sendOrder(order, currentUser);
 
             if (response.isSuccess()) {
                 JOptionPane.showMessageDialog(this, "Заказ успешно оформлен!");
@@ -1150,17 +1239,16 @@ class MyOrdersWindow extends JFrame {
     }
 }
 
-class ManageOrdersWindow extends JFrame {
+class ManageOrdersCarsWindow extends JFrame {
     private JTable ordersTable;
-    private DBManager dbManager;
     private DefaultTableModel model;
     private List<OrderInfo> currentOrders;
 
     private SalesMonitoringWindow monitoringWindow;
 
-    public ManageOrdersWindow(List<OrderInfo> orders, SalesMonitoringWindow monitoringWindow) {
+    public ManageOrdersCarsWindow(List<OrderInfo> orders, SalesMonitoringWindow monitoringWindow) {
         this.monitoringWindow = monitoringWindow;
-        dbManager = new DBManager();
+
 
         setTitle("Обработка заказов");
         setSize(900, 600);
@@ -1174,15 +1262,11 @@ class ManageOrdersWindow extends JFrame {
         JScrollPane scrollPane = new JScrollPane(ordersTable);
         add(scrollPane, BorderLayout.CENTER);
 
-
-
-
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton approveButton = new JButton("Подтвердить");
         JButton rejectButton = new JButton("Отклонить");
         JButton updateButton = new JButton("Обновить");
         JButton exitButton = new JButton("Назад");
-
 
         approveButton.addActionListener(e -> updateOrderStatus("Подтверждён"));
         rejectButton.addActionListener(e -> updateOrderStatus("Отклонён"));
@@ -1245,12 +1329,127 @@ class ManageOrdersWindow extends JFrame {
 
 }
 
+class ServiceRequestWindow extends JFrame {
+    private JTable requestTable;
+    private JButton approveButton, rejectButton;
+    private JTextField serviceDateField;
+    private JTextField descriptionField;
+
+    public ServiceRequestWindow() {
+        setTitle("Заявки на обслуживание");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        // Таблица заявок
+        requestTable = new JTable();
+        JScrollPane scrollPane = new JScrollPane(requestTable);
+
+        approveButton = new JButton("Подтвердить");
+        rejectButton = new JButton("Отклонить");
+        serviceDateField = new JTextField(10);
+        descriptionField = new JTextField(20);
+
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("Дата обслуживания (ГГГГ-ММ-ДД):"));
+        panel.add(serviceDateField);
+        panel.add(new JLabel("Описание:"));
+        panel.add(descriptionField);
+        panel.add(approveButton);
+        panel.add(rejectButton);
+
+        add(scrollPane, BorderLayout.CENTER);
+        add(panel, BorderLayout.SOUTH);
+
+        loadRequests();
+
+        approveButton.addActionListener(e -> updateServiceRequestStatus("Подтверждён"));
+        rejectButton.addActionListener(e -> updateServiceRequestStatus("Отклонён"));
+    }
+
+    private void loadRequests() {
+        Response response = UserSender.getAllServiceRequests();
+        if (response.isSuccess()) {
+            List<ServiceRequest> requests = (List<ServiceRequest>) response.getData();
+            requestTable.setModel(new ServiceRequestTableModel(requests));
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка загрузки заявок: " + response.getMessage());
+        }
+    }
+
+    private void updateServiceRequestStatus(String newStatus) {
+        int selectedRow = requestTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Выберите заказ.");
+            return;
+        }
+
+        int modelRow = requestTable.convertRowIndexToModel(selectedRow);
+        String currentStatus = (String) requestTable.getValueAt(modelRow, 5);
+
+        if (!"Ожидает подтверждения".equals(currentStatus)) {
+            JOptionPane.showMessageDialog(this, "Можно изменить только заказы со статусом 'Ожидает подтверждения'.");
+            return;
+        }
+
+        int orderId = (int) requestTable.getValueAt(modelRow, 0);
+
+        Response response = UserSender.updateServiceRequestStatus(orderId, newStatus);
+        System.out.println(response);
+        if (response.isSuccess()) {
+            JOptionPane.showMessageDialog(this, response.getMessage());
+            loadRequests();
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
+        }
+    }
+
+}
+
+
+class ServiceRequestTableModel extends AbstractTableModel {
+    private List<ServiceRequest> requests;
+    private final String[] columns = {"ID", "Client ID", "Car ID", "Описание", "Дата запроса", "Статус"};
+
+    public ServiceRequestTableModel(List<ServiceRequest> requests) {
+        this.requests = requests;
+    }
+
+    @Override
+    public int getRowCount() {
+        return requests.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return columns.length;
+    }
+
+    @Override
+    public Object getValueAt(int row, int col) {
+        ServiceRequest r = requests.get(row);
+        return switch (col) {
+            case 0 -> r.getId();
+            case 1 -> r.getClientId();
+            case 2 -> r.getCarId();
+            case 3 -> r.getDescription();
+            case 4 -> r.getRequestDate();
+            case 5 -> r.getStatus();
+            default -> null;
+        };
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return columns[column];
+    }
+}
+
 
 class ChangePasswordDialog extends JDialog {
     private JPasswordField oldPasswordField;
     private JPasswordField newPasswordField;
     private JPasswordField confirmPasswordField;
-    private final int userId; // ID текущего пользователя
+    private final int userId;
     private boolean passwordChanged;
 
     public ChangePasswordDialog(JFrame parent, int userId) {
@@ -1299,7 +1498,6 @@ class ChangePasswordDialog extends JDialog {
             return;
         }
 
-        // Отправляем запрос на смену пароля
         Response response = UserSender.changePassword(userId, oldPass, newPass);
 
         if (response.isSuccess()) {
@@ -1360,7 +1558,7 @@ class MyPurchasesWindow extends JFrame {
 }
 class CreateServiceRequestWindow extends JFrame {
     private final int clientId;
-    private final JComboBox<Car> carComboBox; // Комбобокс для выбора автомобиля
+    private final JComboBox<Car> carComboBox;
     private final JTextArea descriptionArea;
 
     public CreateServiceRequestWindow(int clientId) {
@@ -1379,9 +1577,8 @@ class CreateServiceRequestWindow extends JFrame {
         carComboBox = new JComboBox<>();
         carPanel.add(carComboBox, BorderLayout.CENTER);
 
-        loadUserCars(); // Загружаем машины в таблицу и комбобокс
+        loadUserCars();
 
-        // Панель ввода описания
         JPanel descriptionPanel = new JPanel(new BorderLayout());
         descriptionPanel.add(new JLabel("Описание проблемы:"), BorderLayout.NORTH);
         descriptionArea = new JTextArea(5, 30);
@@ -1407,16 +1604,12 @@ class CreateServiceRequestWindow extends JFrame {
     private void loadUserCars() {
         List<PurchaseInfo> purchases = UserSender.getClientSales(clientId);
 
-        DefaultComboBoxModel<Car> carComboBoxModel = new DefaultComboBoxModel<>(); // Модель для комбобокса
+        DefaultComboBoxModel<Car> carComboBoxModel = new DefaultComboBoxModel<>();
 
         for (PurchaseInfo p : purchases) {
-            // Заполняем комбобокс
-            //System.out.println("PurchaseInfo ID: " + p.getId());
-            Car car = new Car(p.getId(), p.getBrand(), p.getModel(), p.getYear());
+            Car car = new Car(p.getCar_id(), p.getBrand(), p.getModel(), p.getYear());
             carComboBoxModel.addElement(car);
-            System.out.println(p.getId() + " " + p.getBrand() + " " + p.getModel() + " " + p.getYear());
         }
-        // Устанавливаем модель для комбобокса
         carComboBox.setModel(carComboBoxModel);
     }
 
@@ -1426,10 +1619,8 @@ class CreateServiceRequestWindow extends JFrame {
             JOptionPane.showMessageDialog(this, "Пожалуйста, введите описание проблемы.");
             return;
         }
-
         Car selectedCar = (Car) carComboBox.getSelectedItem();
         Integer carId = selectedCar != null ? selectedCar.getId() : null;
-
         ServiceRequest request = new ServiceRequest(
                 0,
                 clientId,
@@ -1438,9 +1629,8 @@ class CreateServiceRequestWindow extends JFrame {
                 LocalDateTime.now(),
                 "В ожидании"
         );
-        System.out.println("Car ID: " + request.getCarId());
         Response response = UserSender.sendServiceRequest(request);
-        if ("success".equals(response.getStatus())) {
+        if (response.isSuccess()) {
             JOptionPane.showMessageDialog(this, "Заявка отправлена успешно.");
             dispose();
         } else {
@@ -1448,4 +1638,391 @@ class CreateServiceRequestWindow extends JFrame {
         }
     }
 }
+
+class ReviewWindow extends JFrame {
+    private JTextArea reviewTextArea;
+    private JSpinner ratingSpinner;
+    private int clientId;
+
+    public ReviewWindow(int clientId) {
+        this.clientId = clientId;
+
+        setTitle("Оставить отзыв");
+        setSize(400, 300);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
+        initUI();
+    }
+
+    private void initUI() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        reviewTextArea = new JTextArea(5, 30);
+        reviewTextArea.setLineWrap(true);
+        reviewTextArea.setWrapStyleWord(true);
+        JScrollPane scrollPane = new JScrollPane(reviewTextArea);
+
+        JPanel ratingPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        ratingPanel.add(new JLabel("Оценка (0–10):"));
+        ratingSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
+        ratingPanel.add(ratingSpinner);
+
+        JButton submitButton = new JButton("Отправить");
+        submitButton.addActionListener(this::submitReview);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(ratingPanel, BorderLayout.NORTH);
+        panel.add(submitButton, BorderLayout.SOUTH);
+
+        setContentPane(panel);
+    }
+
+    private void submitReview(ActionEvent e) {
+        String description = reviewTextArea.getText().trim();
+        int rating = (int) ratingSpinner.getValue();
+
+        if (description.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Пожалуйста, введите текст отзыва.");
+            return;
+        }
+
+        Response response = UserSender.sendReview(clientId, description, rating);
+        if (response.isSuccess()) {
+            JOptionPane.showMessageDialog(this, "Спасибо за ваш отзыв!");
+            dispose();
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
+        }
+    }
+}
+
+class ReviewsManagerWindow extends JFrame {
+    private JTable reviewTable;
+    private DefaultTableModel model;
+    private final List<Review> reviews;
+
+    public ReviewsManagerWindow(List<Review> reviews) {
+        this.reviews = reviews;
+        setTitle("Отзывы клиентов");
+        setSize(800, 400);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
+        initUI();
+        loadReviews();
+    }
+
+    private void initUI() {
+        model = new DefaultTableModel(new Object[]{"ID", "ID клиента", "Оценка", "Дата", "Отзыв"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        reviewTable = new JTable(model);
+        reviewTable.setRowHeight(30);
+        reviewTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
+
+        reviewTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+        reviewTable.getColumnModel().getColumn(0).setPreferredWidth(40);
+        reviewTable.getColumnModel().getColumn(1).setPreferredWidth(80);
+        reviewTable.getColumnModel().getColumn(2).setPreferredWidth(60);
+        reviewTable.getColumnModel().getColumn(3).setPreferredWidth(100);
+        reviewTable.getColumnModel().getColumn(4).setPreferredWidth(400);
+
+        reviewTable.getTableHeader().setReorderingAllowed(false);
+
+        JScrollPane scrollPane = new JScrollPane(reviewTable);
+        scrollPane.setPreferredSize(new Dimension(700, 400)); // Можно адаптировать под размер окна
+
+        setLayout(new BorderLayout());
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private void loadReviews() {
+        model.setRowCount(0);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        for (Review r : reviews) {
+            model.addRow(new Object[]{
+                    r.getId(),
+                    r.getClientId(),
+                    r.getRating(),
+                    r.getDateReview().format(formatter),
+                    r.getDescription()
+            });
+        }
+    }
+}
+
+class ClientProfileWindow extends JFrame {
+    private JTextField nameField, phoneField, emailField, addressField;
+    private JButton saveButton;
+
+    private Client client;
+
+    public ClientProfileWindow(Client client) {
+        this.client = client;
+
+        setTitle("Мой профиль");
+        setSize(400, 300);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        initUI();
+        loadClientData();
+    }
+
+    private void initUI() {
+        setLayout(new BorderLayout());
+
+        JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 10));
+        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        formPanel.add(new JLabel("ФИО:"));
+        nameField = new JTextField();
+        formPanel.add(nameField);
+
+        formPanel.add(new JLabel("Телефон:"));
+        phoneField = new JTextField();
+        formPanel.add(phoneField);
+
+        formPanel.add(new JLabel("Email:"));
+        emailField = new JTextField();
+        formPanel.add(emailField);
+
+        formPanel.add(new JLabel("Адрес:"));
+        addressField = new JTextField();
+        formPanel.add(addressField);
+
+        saveButton = new JButton("Сохранить");
+        saveButton.addActionListener(e -> saveClientData());
+
+        add(formPanel, BorderLayout.CENTER);
+        add(saveButton, BorderLayout.SOUTH);
+    }
+
+    private void loadClientData() {
+        Response response = UserSender.getClientProfile(client.getId());
+        if (!response.isSuccess()) {
+            JOptionPane.showMessageDialog(this, "Ошибка загрузки данных: " + response.getMessage());
+            return;
+        }
+
+        this.client = (Client) response.getData();
+        nameField.setText(client.getFull_name());
+        phoneField.setText(client.getPhone());
+        emailField.setText(client.getEmail());
+        addressField.setText(client.getAddress());
+    }
+
+    private void saveClientData() {
+        client.setFullName(nameField.getText());
+        client.setPhone(phoneField.getText());
+        client.setEmail(emailField.getText());
+        client.setAddress(addressField.getText());
+
+        Response response = UserSender.updateClientProfile(client);
+        if (response.isSuccess()) {
+            JOptionPane.showMessageDialog(this, "Профиль успешно обновлен!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка сохранения: " + response.getMessage());
+        }
+    }
+}
+
+class LogsWindow extends JFrame {
+    public LogsWindow(List<LogEntry> logs) {
+        setTitle("Системные логи");
+        setSize(900, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
+        String[] columnNames = {"ID", "Время", "Пользователь", "Действие", "Уровень"};
+        String[][] data = new String[logs.size()][5];
+
+        for (int i = 0; i < logs.size(); i++) {
+            LogEntry log = logs.get(i);
+            data[i][0] = String.valueOf(log.getId());
+            data[i][1] = log.getTimestamp().toString();
+            data[i][2] = log.getUserLogin();
+            data[i][3] = log.getAction();
+            data[i][4] = log.getLevel();
+        }
+
+        JTable table = new JTable(data, columnNames);
+        table.setAutoCreateRowSorter(true);
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        add(scrollPane, BorderLayout.CENTER);
+    }
+}
+
+class MyRequestServiceWindow extends JFrame {
+    private JTable requestsTable;
+    private DefaultTableModel model;
+    private int clientId;
+
+    public MyRequestServiceWindow(int clientId) {
+        this.clientId = clientId;
+        setTitle("Мои заявки на обслуживание");
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        String[] columnNames = {"ID", "ID Авто", "Описание", "Дата подачи", "Статус"};
+
+        requestsTable = new JTable(new DefaultTableModel(columnNames, 0));
+        JScrollPane scrollPane = new JScrollPane(requestsTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton updateButton = new JButton("Обновить");
+        JButton cancelButton = new JButton("Отменить заявку");
+        JButton exitButton = new JButton("Назад");
+
+        updateButton.addActionListener(e -> loadServiceRequests(clientId));
+        cancelButton.addActionListener(e -> cancelSelectedRequest());
+        exitButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(updateButton);
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(exitButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        loadServiceRequests(clientId);
+    }
+
+    private void loadServiceRequests(int clientId) {
+        try {
+            List<ServiceRequest> requests = UserSender.getServiceRequestsForClient(clientId);
+
+            if (requests == null || requests.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "У вас нет заявок.");
+                return;
+            }
+
+            model = (DefaultTableModel) requestsTable.getModel();
+            model.setRowCount(0);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+            for (ServiceRequest req : requests) {
+                model.addRow(new Object[]{
+                        req.getId(),
+                        req.getCarId(),
+                        req.getDescription(),
+                        req.getRequestDate().format(formatter),
+                        req.getStatus()
+                });
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Ошибка при загрузке заявок: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void cancelSelectedRequest() {
+        int selectedRow = requestsTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Пожалуйста, выберите заявку.");
+            return;
+        }
+
+        int modelRow = requestsTable.convertRowIndexToModel(selectedRow);
+        String status = (String) model.getValueAt(modelRow, 4);
+        if (!status.equals("Ожидает подтверждения")) {
+            JOptionPane.showMessageDialog(this, "Заявка уже в обработке и не может быть отменена.");
+            return;
+        }
+
+        int requestId = (int) model.getValueAt(modelRow, 0);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Вы уверены, что хотите отменить заявку №" + requestId + "?",
+                "Подтверждение", JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            Response response = UserSender.cancelServiceRequest(requestId);
+            if (response.isSuccess()) {
+                JOptionPane.showMessageDialog(this, "Заявка успешно отменена.");
+                loadServiceRequests(clientId);
+            } else {
+                JOptionPane.showMessageDialog(this, "Ошибка при отмене: " + response.getMessage());
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Ошибка при отмене заявки: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+
+class MyServiceHistoryWindow extends JFrame {
+    private JTable serviceTable;
+    private DefaultTableModel model;
+    private int clientId;
+
+    public MyServiceHistoryWindow(int clientId) {
+        this.clientId = clientId;
+        setTitle("История сервисного обслуживания");
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        String[] columnNames = {"ID", "ID автомобиля", "Дата обслуживания", "Описание", "По гарантии"};
+        model = new DefaultTableModel(columnNames, 0);
+        serviceTable = new JTable(model);
+
+        JScrollPane scrollPane = new JScrollPane(serviceTable);
+        add(scrollPane, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton updateButton = new JButton("Обновить");
+        JButton exitButton = new JButton("Назад");
+
+        updateButton.addActionListener(e -> loadServiceHistory(clientId));
+        exitButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(updateButton);
+        buttonPanel.add(exitButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        loadServiceHistory(clientId);
+    }
+
+    private void loadServiceHistory(int clientId) {
+        try {
+            List<ServiceRecord> records = UserSender.getServiceHistoryForClient(clientId);
+            model.setRowCount(0);
+
+            if (records == null || records.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "У вас нет записей об обслуживании.");
+                return;
+            }
+
+            for (ServiceRecord record : records) {
+                model.addRow(new Object[]{
+                        record.getId(),
+                        record.getCar_id(),
+                        record.getService_date(),
+                        record.getDescription(),
+                        record.is_under_warranty() ? "Да" : "Нет"
+                });
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Ошибка при загрузке истории обслуживания: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
 

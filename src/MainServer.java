@@ -15,17 +15,16 @@ public class MainServer {
             System.out.println("Сервер запущен и слушает порт " + PORT);
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();  // Ожидаем подключения клиента
+                Socket clientSocket = serverSocket.accept();
                 System.out.println("Клиент подключился: " + clientSocket.getInetAddress());
 
-                // Обработка каждого клиента в отдельном потоке
                 executorService.submit(new UserHandler(clientSocket, dbManager));
             }
 
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            executorService.shutdown();  // Завершаем работу потока
+            executorService.shutdown();
         }
     }
 }

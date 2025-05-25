@@ -20,6 +20,10 @@ public class ServiceRequest implements Serializable {
         this.status = status;
     }
 
+    public ServiceRequest() {
+
+    }
+
     // Геттеры и сеттеры
 
     public int getId() { return id; }

@@ -19,6 +19,7 @@ public class ServiceRecord implements Serializable {
         this.description = description;
         this.is_under_warranty = is_under_warranty;
     }
+    public ServiceRecord() {}
     public ServiceRecord(int car_id, int client_id, LocalDate service_date, String description, boolean is_under_warranty) {
         this.car_id = car_id;
         this.client_id = client_id;
@@ -47,5 +48,27 @@ public class ServiceRecord implements Serializable {
 
 
     public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setClientId(int clientId) {
+        this.client_id = clientId;
+    }
+
+    public void setCarId(Integer carId) {
+        this.car_id = carId;
+    }
+
+    public void setServiceDate(LocalDate date) {
+        this.service_date = date;
+    }
+
+    public void setDescription(String desc) {
+        this.description = desc;
+    }
+
+
+    public void setUnderWarranty(boolean is_under_warranty) {
+        this.is_under_warranty = is_under_warranty;
     }
 }

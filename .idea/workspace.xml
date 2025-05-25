@@ -4,25 +4,26 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="add server">
+    <list default="true" id="aff829a4-95f3-40c4-a1ef-1a460218bf4d" name="Changes" comment="remake different func">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AdminWindow.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/AuthManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/AuthManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ClientWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/DBManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/LoginWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/LoginWindow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/MainWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/ManagerWindow.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Car_Server/model/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Car_Server/model/User.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/AuthManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/AuthManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DBManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DBManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/LoginWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/LoginWindow.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/MainServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MainWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainWindow.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Request_Response/Response.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Request_Response/Response.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/UserHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/UserSender.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/UserSender.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/Car.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Car.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/Order.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Order.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/OrderInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/OrderInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/Sale.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/Sale.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/ServiceRecord.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/ServiceRecord.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/ServiceRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/ServiceRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/util/BackupManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/util/BackupManager.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,12 +52,12 @@
     &quot;accountId&quot;: &quot;fb1efe7d-fcf4-4be1-934a-86666ee8d657&quot;
   }
 }</component>
-  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
-  <component name="KubernetesApiProvider"><![CDATA[{
-  "isMigrated": true
-}]]></component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
@@ -148,7 +149,14 @@
       <workItem from="1746524179919" duration="918000" />
       <workItem from="1746557238372" duration="1823000" />
       <workItem from="1746774700789" duration="18942000" />
-      <workItem from="1746866722786" duration="31420000" />
+      <workItem from="1746866722786" duration="31588000" />
+      <workItem from="1746962504995" duration="6722000" />
+      <workItem from="1746988357186" duration="6163000" />
+      <workItem from="1747066100010" duration="129000" />
+      <workItem from="1747929068767" duration="11940000" />
+      <workItem from="1748020663452" duration="3919000" />
+      <workItem from="1748070819205" duration="12085000" />
+      <workItem from="1748153251906" duration="21199000" />
     </task>
     <task id="LOCAL-00001" summary="08.04">
       <option name="closed" value="true" />
@@ -238,7 +246,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746479562997</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="remake different func">
+      <option name="closed" value="true" />
+      <created>1746916823532</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1746916823532</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -252,7 +268,8 @@
     <MESSAGE value="orders+sales" />
     <MESSAGE value="changePassword + MyPurchases + some refactoring(add buttons on windows)" />
     <MESSAGE value="add server" />
-    <option name="LAST_COMMIT_MESSAGE" value="add server" />
+    <MESSAGE value="remake different func" />
+    <option name="LAST_COMMIT_MESSAGE" value="remake different func" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -1,5 +1,6 @@
 import Request_Response.Request;
 import Request_Response.Response;
+import model.Client;
 import model.User;
 
 import javax.swing.*;
@@ -10,7 +11,7 @@ public class LoginWindow extends JFrame {
     private JPasswordField passwordField;
     private JButton loginButton, registerButton;
 
-    public LoginWindow(DBManager dbManager) {
+    public LoginWindow() {
         setTitle("Авторизация");
         setSize(300, 200);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -29,11 +30,11 @@ public class LoginWindow extends JFrame {
         add(loginButton);
         add(registerButton);
 
-        loginButton.addActionListener(e -> handleAuth("LOGIN", dbManager));
-        registerButton.addActionListener(e -> handleAuth("REGISTER", dbManager));
+        loginButton.addActionListener(e -> handleAuth("LOGIN"));
+        registerButton.addActionListener(e -> handleAuth("REGISTER"));
     }
 
-    private void handleAuth(String commandType, DBManager dbManager) {
+    private void handleAuth(String commandType) {
         String login = loginField.getText();
         String password = new String(passwordField.getPassword());
 
@@ -47,16 +48,26 @@ public class LoginWindow extends JFrame {
 
         if (response.isSuccess()) {
             User user = (User) response.getData();
+            UserSender.currentUser = user;
             JOptionPane.showMessageDialog(this, "Успешно!");
 
+            if ("CLIENT".equals(user.getRole())) {
+                Response clientResponse = UserSender.getClientProfile(user.getId());
+                if (clientResponse.isSuccess()) {
+                    Client client = (Client) clientResponse.getData();
+                    user.setClientData(client);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Ошибка загрузки данных клиента: " + clientResponse.getMessage());
+                    return;
+                }
+            }
             switch (user.getRole()) {
                 case "CLIENT" -> new ClientWindow(user).setVisible(true);
                 case "ADMIN" -> new AdminWindow(user).setVisible(true);
                 case "MANAGER" -> new ManagerWindow(user).setVisible(true);
                 default -> JOptionPane.showMessageDialog(this, "Неизвестная роль: " + user.getRole());
             }
-
-            this.dispose();
+        this.dispose();
         } else {
             JOptionPane.showMessageDialog(this, "Ошибка: " + response.getMessage());
         }
@@ -64,6 +75,6 @@ public class LoginWindow extends JFrame {
 
     public static void main(String[] args) {
         DBManager dbManager = new DBManager();
-        SwingUtilities.invokeLater(() -> new LoginWindow(dbManager).setVisible(true));
+        SwingUtilities.invokeLater(() -> new LoginWindow().setVisible(true));
     }
 }

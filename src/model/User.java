@@ -8,6 +8,7 @@ public class User implements Serializable {
     private String login;
     private String role;
     private int isBlocked;
+    private Client clientData;
 
     public User(int id, String login, String role, int isBlocked) {
         this.id = id;
@@ -37,5 +38,13 @@ public class User implements Serializable {
 
     public boolean isBlocked() {
         return isBlocked == 1;
+    }
+
+    public Client getClientData() {
+        return clientData;
+    }
+
+    public void setClientData(Client clientData) {
+        this.clientData = clientData;
     }
 }

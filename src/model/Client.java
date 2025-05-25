@@ -17,6 +17,11 @@ public class Client implements Serializable {
         this.address = address;
 
     }
+
+    public Client() {
+        
+    }
+
     public int getId() {
         return id;
     }
@@ -42,5 +47,22 @@ public class Client implements Serializable {
     }
 
     public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setFullName(String text) {
+        this.full_name = text;
+    }
+
+    public void setPhone(String text) {
+        this.phone = text;
+    }
+
+    public void setEmail(String text) {
+        this.email = text;
+    }
+
+    public void setAddress(String text) {
+        this.address = text;
     }
 }
